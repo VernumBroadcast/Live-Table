@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Tables - Live Display</title>
+    <link rel="stylesheet" href="output.css">
+</head>
+<body>
+    <div class="output-container">
+
+        <div class="controls" style="display: none;">
+            <!-- Hidden - group is controlled by admin settings -->
+            <select id="group-select" class="group-select">
+                <optgroup label="Preliminary Groups">
+                    <option value="group-a">Group A</option>
+                    <option value="group-b">Group B</option>
+                    <option value="group-c">Group C</option>
+                    <option value="group-d">Group D</option>
+                </optgroup>
+                <optgroup label="Martyr Fahad Cup">
+                    <option value="cup-group-3">Cup Group 3</option>
+                    <option value="cup-group-4">Cup Group 4</option>
+                </optgroup>
+                <optgroup label="Main Round">
+                    <option value="main-group-1">Main Round Group 1</option>
+                    <option value="main-group-2">Main Round Group 2</option>
+                </optgroup>
+                <optgroup label="Final Rankings">
+                    <option value="final-ranking">Final Ranking</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div id="content-wrapper" style="width: 100%; max-width: 1000px; display: flex; flex-direction: column; align-items: center;">
+            <div id="table-container" class="table-container">
+                <!-- Table will be rendered here -->
+            </div>
+
+            <div id="matches-container" class="matches-container">
+                <!-- Matches will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="flag-mapping.js"></script>
+    <script src="data.js"></script>
+    <script src="output.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>22AMHC Schedule & Results - Tournament Tables</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏐 Asian Men's Handball Championship 2026</h1>
+            <p class="subtitle">Tournament Tables & Results</p>
+        </header>
+
+        <div class="controls">
+            <label for="group-select">Select Group/Table:</label>
+            <select id="group-select" class="group-select">
+                <optgroup label="Preliminary Groups">
+                    <option value="group-a">Group A</option>
+                    <option value="group-b">Group B</option>
+                    <option value="group-c">Group C</option>
+                    <option value="group-d">Group D</option>
+                </optgroup>
+                <optgroup label="Martyr Fahad Cup">
+                    <option value="cup-group-3">Cup Group 3</option>
+                    <option value="cup-group-4">Cup Group 4</option>
+                </optgroup>
+                <optgroup label="Main Round">
+                    <option value="main-group-1">Main Round Group 1</option>
+                    <option value="main-group-2">Main Round Group 2</option>
+                </optgroup>
+                <optgroup label="Final Rankings">
+                    <option value="final-ranking">Final Ranking</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div id="table-container" class="table-container">
+            <!-- Table will be rendered here -->
+        </div>
+
+        <div id="matches-container" class="matches-container">
+            <!-- Matches will be rendered here -->
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
