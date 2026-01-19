@@ -8,6 +8,9 @@
 </head>
 <body>
     <div class="group-selector-top-right">
+            <button id="refresh-btn" class="refresh-btn" onclick="manualRefresh()" title="Refresh Data">
+                🔄
+            </button>
             <select id="group-select" class="group-select-top">
                 <optgroup label="Preliminary Groups">
                     <option value="group-a">Group A</option>
@@ -31,27 +34,6 @@
     
     <div class="output-container">
 
-        <div class="controls" style="display: none;">
-            <!-- Hidden - using top-right selector instead -->
-                <optgroup label="Preliminary Groups">
-                    <option value="group-a">Group A</option>
-                    <option value="group-b">Group B</option>
-                    <option value="group-c">Group C</option>
-                    <option value="group-d">Group D</option>
-                </optgroup>
-                <optgroup label="Martyr Fahad Cup">
-                    <option value="cup-group-3">Cup Group 3</option>
-                    <option value="cup-group-4">Cup Group 4</option>
-                </optgroup>
-                <optgroup label="Main Round">
-                    <option value="main-group-1">Main Round Group 1</option>
-                    <option value="main-group-2">Main Round Group 2</option>
-                </optgroup>
-                <optgroup label="Final Rankings">
-                    <option value="final-ranking">Final Ranking</option>
-                </optgroup>
-            </select>
-        </div>
 
         <div id="content-wrapper" style="width: 100%; max-width: 1000px; display: flex; flex-direction: column; align-items: center;">
             <div id="table-container" class="table-container">

@@ -8,6 +8,7 @@ async function fetchTournamentData() {
         // Use a CORS proxy to fetch the HTML
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         
+        console.log('Fetching tournament data...');
         const response = await fetch(proxyUrl);
         const data = await response.json();
         
@@ -24,15 +25,26 @@ async function fetchTournamentData() {
         
         // Only update if we got valid data
         if (fetchedData && Object.keys(fetchedData).length > 0) {
-            displayData = fetchedData;
-            const currentGroup = getCurrentGroup();
-            renderGroup(currentGroup);
+            // Check if data actually changed
+            const dataChanged = JSON.stringify(displayData) !== JSON.stringify(fetchedData);
+            
+            if (dataChanged) {
+                console.log('Tournament data updated!');
+                displayData = fetchedData;
+                const currentGroup = getCurrentGroup();
+                renderGroup(currentGroup);
+            } else {
+                console.log('No changes detected in tournament data');
+            }
+        } else {
+            console.warn('No valid data parsed from website');
         }
         
     } catch (error) {
         console.error('Error fetching tournament data:', error);
-        // On error, use fallback data
+        // On error, use fallback data only if we don't have any
         if (!displayData || Object.keys(displayData).length === 0) {
+            console.log('Using fallback data');
             displayData = JSON.parse(JSON.stringify(tournamentData));
             updateFlagPaths(displayData);
             const currentGroup = getCurrentGroup();
@@ -372,6 +384,21 @@ function getCurrentGroup() {
     return 'group-a'; // Default
 }
 
+// Manual refresh function
+function manualRefresh() {
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+        refreshBtn.style.transform = 'rotate(360deg)';
+        refreshBtn.style.transition = 'transform 0.5s ease';
+        setTimeout(() => {
+            refreshBtn.style.transform = 'rotate(0deg)';
+        }, 500);
+    }
+    
+    console.log('Manual refresh triggered');
+    fetchTournamentData();
+}
+
 // Check if fixtures should be shown (stored in localStorage)
 function shouldShowFixtures() {
     const saved = localStorage.getItem('showFixtures');
@@ -410,13 +437,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Then fetch fresh data from website
     fetchTournamentData();
 
-    // Auto-refresh every 30 seconds to get latest data from website
+    // Auto-refresh every 10 seconds to get latest data from website
     setInterval(function() {
-        const currentGroup = getCurrentGroup();
         fetchTournamentData();
-        // Re-render with current selection after fetch
-        setTimeout(() => {
-            renderGroup(currentGroup);
-        }, 100);
-    }, 30000); // Refresh every 30 seconds
+    }, 10000); // Refresh every 10 seconds for more frequent updates
 });
