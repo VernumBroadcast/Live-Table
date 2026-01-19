@@ -38,6 +38,43 @@ body::before {
     pointer-events: none;
 }
 
+.group-selector-top-right {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+}
+
+.group-select-top {
+    padding: 10px 15px;
+    font-size: 1em;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    color: white;
+    cursor: pointer;
+    font-family: 'Cairo', Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.group-select-top:hover {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+.group-select-top:focus {
+    border-color: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+
+.group-select-top option {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+}
+
 .output-container {
     max-width: 1200px;
     width: 100%;
@@ -416,6 +453,16 @@ table td:nth-child(2) {
 }
 
 @media (max-width: 768px) {
+    .group-selector-top-right {
+        top: 10px;
+        right: 10px;
+    }
+    
+    .group-select-top {
+        padding: 8px 12px;
+        font-size: 0.9em;
+    }
+    
     .output-header h1,
     .matches-container h2 {
         font-size: 2em;
@@ -453,11 +500,6 @@ table td:nth-child(2) {
     
     .match-time {
         font-size: 1.2em;
-    }
-    
-    .logo-top-right,
-    .logo-bottom-left {
-        display: none;
     }
 }
 

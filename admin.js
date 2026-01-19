@@ -15,8 +15,8 @@ function loadSettings() {
         if (displaySettings.showFixtures !== undefined) {
             document.getElementById('show-fixtures').checked = displaySettings.showFixtures;
         } else {
-            // Default to true if not set
-            document.getElementById('show-fixtures').checked = true;
+            // Default to false if not set
+            document.getElementById('show-fixtures').checked = false;
         }
         
         if (displaySettings.title) {
@@ -30,7 +30,7 @@ function loadSettings() {
         // Set defaults
         displaySettings = {
             group: 'group-a',
-            showFixtures: true,
+            showFixtures: false,  // Fixtures off by default
             title: 'Asian Men\'s Handball Championship 2026',
             subtitle: 'Tournament Tables & Results'
         };

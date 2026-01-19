@@ -370,21 +370,18 @@ function loadDisplaySettings() {
     if (savedSettings) {
         const settings = JSON.parse(savedSettings);
         
-        // Set the group selector to match admin setting
-        if (settings.group) {
-            document.getElementById('group-select').value = settings.group;
+        // Set the group selector to match admin setting (if admin has set it)
+        // But allow manual override from top-right selector
+        const groupSelect = document.getElementById('group-select');
+        if (groupSelect && settings.group) {
+            groupSelect.value = settings.group;
         }
-        
-        // Don't override title - it's set dynamically based on content
-        // if (settings.title) {
-        //     document.getElementById('tournament-title').textContent = settings.title;
-        // }
         
         return settings;
     }
     return {
         group: 'group-a',
-        showFixtures: true
+        showFixtures: false  // Fixtures off by default
     };
 }
 
@@ -397,13 +394,24 @@ document.addEventListener('DOMContentLoaded', function() {
     displayData = JSON.parse(JSON.stringify(tournamentData));
     updateFlagPaths(displayData);
     
-    // Render the group specified in settings
-    renderGroup(settings.group || 'group-a');
-
-    // Handle group selection change (user can still override)
-    document.getElementById('group-select').addEventListener('change', function() {
-        renderGroup(this.value);
-    });
+    // Render the group specified in settings or default
+    const initialGroup = settings.group || 'group-a';
+    renderGroup(initialGroup);
+    
+    // Set the selector to match and handle changes
+    const groupSelect = document.getElementById('group-select');
+    if (groupSelect) {
+        groupSelect.value = initialGroup;
+        
+        // Handle group selection change from top-right selector
+        groupSelect.addEventListener('change', function() {
+            renderGroup(this.value);
+            // Save the selection
+            const currentSettings = loadDisplaySettings();
+            currentSettings.group = this.value;
+            localStorage.setItem('displaySettings', JSON.stringify(currentSettings));
+        });
+    }
     
     // Then fetch fresh data from website
     fetchTournamentData();
@@ -411,28 +419,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto-refresh every 30 seconds to get latest data from website
     setInterval(function() {
         fetchTournamentData();
-        
-        // Also check for settings changes
-        const newSettings = loadDisplaySettings();
-        const currentGroup = document.getElementById('group-select').value;
-        
-        // Update group if admin changed it
-        if (newSettings.group && newSettings.group !== currentGroup) {
-            document.getElementById('group-select').value = newSettings.group;
-            renderGroup(newSettings.group);
-        }
     }, 30000); // Refresh every 30 seconds
     
-    // Also check settings every 2 seconds for faster updates
+    // Check settings every 2 seconds for admin changes (but don't override manual selection)
     setInterval(function() {
         const newSettings = loadDisplaySettings();
-        const currentGroup = document.getElementById('group-select').value;
-        
-        // Update group if admin changed it
-        if (newSettings.group && newSettings.group !== currentGroup) {
-            document.getElementById('group-select').value = newSettings.group;
-            renderGroup(newSettings.group);
-        }
         
         // Show/hide fixtures based on setting
         const matchesContainer = document.getElementById('matches-container');
