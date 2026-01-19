@@ -3,52 +3,79 @@ let displayData = {};
 
 // Fetch data from the website
 async function fetchTournamentData() {
-    try {
-        const url = 'https://asianhandball.org/kuwait2026/s/';
-        // Use a CORS proxy to fetch the HTML
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-        
-        console.log('Fetching tournament data...');
-        const response = await fetch(proxyUrl);
-        const data = await response.json();
-        
-        if (!data.contents) {
-            throw new Error('No content received');
-        }
-        
-        // Parse the HTML content
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data.contents, 'text/html');
-        
-        // Extract tournament data
-        const fetchedData = parseTournamentData(doc);
-        
-        // Only update if we got valid data
-        if (fetchedData && Object.keys(fetchedData).length > 0) {
-            // Check if data actually changed
-            const dataChanged = JSON.stringify(displayData) !== JSON.stringify(fetchedData);
+    const url = 'https://asianhandball.org/kuwait2026/s/';
+    
+    // Try multiple CORS proxy options
+    const proxyOptions = [
+        `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+        `https://cors-anywhere.herokuapp.com/${url}`,
+        `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+    ];
+    
+    for (let i = 0; i < proxyOptions.length; i++) {
+        try {
+            console.log(`Fetching tournament data... (attempt ${i + 1}/${proxyOptions.length})`);
+            const response = await fetch(proxyOptions[i], {
+                method: 'GET',
+                headers: {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                }
+            });
             
-            if (dataChanged) {
-                console.log('Tournament data updated!');
-                displayData = fetchedData;
-                const currentGroup = getCurrentGroup();
-                renderGroup(currentGroup);
+            let htmlContent = '';
+            
+            // Handle different proxy response formats
+            if (proxyOptions[i].includes('allorigins.win')) {
+                const data = await response.json();
+                htmlContent = data.contents;
             } else {
-                console.log('No changes detected in tournament data');
+                htmlContent = await response.text();
             }
-        } else {
-            console.warn('No valid data parsed from website');
-        }
-        
-    } catch (error) {
-        console.error('Error fetching tournament data:', error);
-        // On error, use fallback data only if we don't have any
-        if (!displayData || Object.keys(displayData).length === 0) {
-            console.log('Using fallback data');
-            displayData = JSON.parse(JSON.stringify(tournamentData));
-            updateFlagPaths(displayData);
-            const currentGroup = getCurrentGroup();
-            renderGroup(currentGroup);
+            
+            if (!htmlContent || htmlContent.length < 100) {
+                throw new Error('No valid content received');
+            }
+            
+            // Parse the HTML content
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+            
+            // Extract tournament data
+            const fetchedData = parseTournamentData(doc);
+            
+            // Only update if we got valid data
+            if (fetchedData && Object.keys(fetchedData).length > 0) {
+                // Check if data actually changed
+                const dataChanged = JSON.stringify(displayData) !== JSON.stringify(fetchedData);
+                
+                if (dataChanged) {
+                    console.log('Tournament data updated!');
+                    displayData = fetchedData;
+                    const currentGroup = getCurrentGroup();
+                    renderGroup(currentGroup);
+                } else {
+                    console.log('No changes detected in tournament data');
+                }
+                return; // Success, exit function
+            } else {
+                throw new Error('No valid data parsed');
+            }
+            
+        } catch (error) {
+            console.warn(`Proxy ${i + 1} failed:`, error.message);
+            // Try next proxy
+            if (i === proxyOptions.length - 1) {
+                // All proxies failed
+                console.error('All CORS proxies failed. Using fallback data.');
+                if (!displayData || Object.keys(displayData).length === 0) {
+                    console.log('Using fallback data');
+                    displayData = JSON.parse(JSON.stringify(tournamentData));
+                    updateFlagPaths(displayData);
+                    const currentGroup = getCurrentGroup();
+                    renderGroup(currentGroup);
+                }
+            }
         }
     }
 }
@@ -213,9 +240,15 @@ function renderGroup(groupKey) {
     tableContainer.innerHTML = '';
     matchesContainer.innerHTML = '';
 
-    // Render table with group name headline
+    // Render table with group name headline and refresh button
+    const groupLetter = group.name.replace('Group ', '').replace('Cup Group ', 'C').replace('Main Round Group ', 'M').replace('Final Ranking', 'Final');
     let tableHTML = `
-        <h2 class="group-headline">${group.name.toUpperCase()}</h2>
+        <div class="headline-container">
+            <h2 class="group-headline">${group.name.toUpperCase()}</h2>
+            <button id="refresh-btn" class="refresh-btn-below" onclick="manualRefresh()" title="Refresh Data">
+                🔄
+            </button>
+        </div>
         <table>
             <thead>
                 <tr>
