@@ -46,8 +46,8 @@ body::before {
 }
 
 .group-select-top {
-    padding: 10px 15px;
-    font-size: 1em;
+    padding: 12px 18px;
+    font-size: 1.1em;
     border: 2px solid rgba(255, 255, 255, 0.5);
     border-radius: 8px;
     background: rgba(0, 0, 0, 0.6);
@@ -76,16 +76,16 @@ body::before {
 }
 
 .output-container {
-    max-width: 1200px;
+    max-width: 95%;
     width: 100%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     min-height: 100vh;
-    padding: 40px 20px;
-    margin-top: -100px;
+    padding: 20px;
+    margin-top: 0;
     position: relative;
     z-index: 1;
 }
@@ -109,22 +109,23 @@ body::before {
     padding: 0;
     box-shadow: none;
     margin-bottom: 40px;
-    margin-top: -20px;
+    margin-top: 0;
     overflow-x: auto;
     width: 100%;
-    max-width: 900px;
+    max-width: 95%;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
 .group-headline {
-    font-size: 2.8em;
+    font-size: 4em;
     font-weight: bold;
     color: white;
     text-align: center;
-    margin-bottom: 25px;
-    letter-spacing: 3px;
+    margin-bottom: 30px;
+    margin-top: 10px;
+    letter-spacing: 4px;
     text-transform: uppercase;
     text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
 }
@@ -135,9 +136,9 @@ body::before {
 
 table {
     width: 100%;
-    max-width: 900px;
+    max-width: 100%;
     border-collapse: collapse;
-    font-size: 1.4em;
+    font-size: 1.8em;
     margin: 0 auto;
     background: transparent;
 }
@@ -148,26 +149,26 @@ table thead {
 }
 
 table th {
-    padding: 19px 10px;
+    padding: 25px 15px;
     text-align: center;
     font-weight: bold;
     text-transform: uppercase;
-    font-size: 1.1em;
-    letter-spacing: 1.5px;
+    font-size: 1.2em;
+    letter-spacing: 2px;
     color: rgba(255, 255, 255, 0.9);
-    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    border-bottom: 3px solid rgba(255, 255, 255, 0.3);
 }
 
 table th:nth-child(2) {
     text-align: left;
-    padding-left: 10px;
+    padding-left: 15px;
 }
 
 /* Reduce padding for stats columns (PLD onwards) */
 table th:nth-child(n+3),
 table td:nth-child(n+3) {
-    padding-left: 6px;
-    padding-right: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
 table tbody tr {
@@ -185,10 +186,10 @@ table tbody tr:last-child {
 }
 
 table td {
-    padding: 22px 10px;
+    padding: 28px 15px;
     text-align: center;
     color: white;
-    font-size: 1.3em;
+    font-size: 1.6em;
     vertical-align: middle;
 }
 
@@ -204,8 +205,8 @@ table td:first-child {
 
 table td:nth-child(2) {
     text-align: left;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: 15px;
+    padding-right: 15px;
     vertical-align: middle;
 }
 
@@ -213,9 +214,9 @@ table td:nth-child(2) {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 12px;
+    gap: 15px;
     font-weight: bold;
-    font-size: 1.4em;
+    font-size: 1.7em;
     width: 100%;
     line-height: 1.2;
     vertical-align: middle;
@@ -226,25 +227,25 @@ table td:nth-child(2) {
 }
 
 .team-flag {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
     object-fit: contain;
     flex-shrink: 0;
 }
 
 .position {
     display: inline-block;
-    width: 42px;
-    height: 42px;
-    line-height: 42px;
+    width: 55px;
+    height: 55px;
+    line-height: 55px;
     text-align: center;
     background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     font-weight: bold;
     margin: 0;
     color: white;
-    font-size: 1.2em;
+    font-size: 1.4em;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     vertical-align: middle;
     position: relative;
@@ -285,7 +286,7 @@ table td:nth-child(2) {
     padding: 0;
     box-shadow: none;
     width: 100%;
-    max-width: 1000px;
+    max-width: 95%;
 }
 
 .matches-container h2 {
@@ -338,13 +339,13 @@ table td:nth-child(2) {
 }
 
 .match-team .team-flag {
-    width: 85px;
-    height: 85px;
+    width: 110px;
+    height: 110px;
     object-fit: contain;
 }
 
 .match-team .team-name {
-    font-size: 1.9em;
+    font-size: 2.3em;
     font-weight: bold;
     color: white;
     text-transform: uppercase;
@@ -366,7 +367,7 @@ table td:nth-child(2) {
 }
 
 .match-time {
-    font-size: 2.2em;
+    font-size: 2.6em;
     font-weight: bold;
     color: white;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
@@ -430,25 +431,25 @@ table td:nth-child(2) {
     }
     
     .team-name {
-        font-size: 1.25em;
+        font-size: 1.5em;
     }
     
     table {
-        font-size: 1.25em;
-        max-width: 750px;
+        font-size: 1.6em;
+        max-width: 95%;
     }
     
     .match-team .team-flag {
-        width: 75px;
-        height: 75px;
+        width: 95px;
+        height: 95px;
     }
     
     .match-team .team-name {
-        font-size: 1.7em;
+        font-size: 2em;
     }
     
     .match-time {
-        font-size: 1.95em;
+        font-size: 2.3em;
     }
 }
 

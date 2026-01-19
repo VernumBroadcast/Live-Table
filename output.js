@@ -25,7 +25,7 @@ async function fetchTournamentData() {
         // Only update if we got valid data
         if (fetchedData && Object.keys(fetchedData).length > 0) {
             displayData = fetchedData;
-            const currentGroup = document.getElementById('group-select').value;
+            const currentGroup = getCurrentGroup();
             renderGroup(currentGroup);
         }
         
@@ -35,7 +35,7 @@ async function fetchTournamentData() {
         if (!displayData || Object.keys(displayData).length === 0) {
             displayData = JSON.parse(JSON.stringify(tournamentData));
             updateFlagPaths(displayData);
-            const currentGroup = document.getElementById('group-select').value;
+            const currentGroup = getCurrentGroup();
             renderGroup(currentGroup);
         }
     }
@@ -293,9 +293,8 @@ function renderGroup(groupKey) {
 
     tableContainer.innerHTML = tableHTML;
 
-    // Render matches if available and if settings allow
-    const settings = loadDisplaySettings();
-    if (settings.showFixtures && group.matches && group.matches.length > 0) {
+    // Render matches if available and if fixtures are enabled
+    if (shouldShowFixtures() && group.matches && group.matches.length > 0) {
         // Get country code abbreviations and display names
         const countryCodes = {
             'Qatar': 'QAT',
@@ -352,7 +351,7 @@ function renderGroup(groupKey) {
         matchesContainer.style.display = 'block';
     } else {
         matchesContainer.innerHTML = '';
-        matchesContainer.style.display = settings.showFixtures ? 'block' : 'none';
+        matchesContainer.style.display = shouldShowFixtures() ? 'block' : 'none';
     }
 
     // Add fade-in animation
@@ -364,71 +363,60 @@ function renderGroup(groupKey) {
     }
 }
 
-// Load display settings from admin
-function loadDisplaySettings() {
-    const savedSettings = localStorage.getItem('displaySettings');
-    if (savedSettings) {
-        const settings = JSON.parse(savedSettings);
-        
-        // Set the group selector to match admin setting (if admin has set it)
-        // But allow manual override from top-right selector
-        const groupSelect = document.getElementById('group-select');
-        if (groupSelect && settings.group) {
-            groupSelect.value = settings.group;
-        }
-        
-        return settings;
+// Get current selected group from dropdown
+function getCurrentGroup() {
+    const groupSelect = document.getElementById('group-select');
+    if (groupSelect && groupSelect.value) {
+        return groupSelect.value;
     }
-    return {
-        group: 'group-a',
-        showFixtures: false  // Fixtures off by default
-    };
+    return 'group-a'; // Default
+}
+
+// Check if fixtures should be shown (stored in localStorage)
+function shouldShowFixtures() {
+    const saved = localStorage.getItem('showFixtures');
+    return saved === 'true';
+}
+
+// Save fixtures preference
+function setShowFixtures(show) {
+    localStorage.setItem('showFixtures', show ? 'true' : 'false');
 }
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // Load display settings
-    const settings = loadDisplaySettings();
-    
     // Load default data first for immediate display
     displayData = JSON.parse(JSON.stringify(tournamentData));
     updateFlagPaths(displayData);
     
-    // Render the group specified in settings or default
-    const initialGroup = settings.group || 'group-a';
-    renderGroup(initialGroup);
-    
-    // Set the selector to match and handle changes
+    // Get saved group preference or default to group-a
+    const savedGroup = localStorage.getItem('selectedGroup') || 'group-a';
     const groupSelect = document.getElementById('group-select');
+    
     if (groupSelect) {
-        groupSelect.value = initialGroup;
+        groupSelect.value = savedGroup;
         
         // Handle group selection change from top-right selector
         groupSelect.addEventListener('change', function() {
-            renderGroup(this.value);
-            // Save the selection
-            const currentSettings = loadDisplaySettings();
-            currentSettings.group = this.value;
-            localStorage.setItem('displaySettings', JSON.stringify(currentSettings));
+            const selectedGroup = this.value;
+            localStorage.setItem('selectedGroup', selectedGroup);
+            renderGroup(selectedGroup);
         });
     }
+    
+    // Render the initial group
+    renderGroup(savedGroup);
     
     // Then fetch fresh data from website
     fetchTournamentData();
 
     // Auto-refresh every 30 seconds to get latest data from website
     setInterval(function() {
+        const currentGroup = getCurrentGroup();
         fetchTournamentData();
+        // Re-render with current selection after fetch
+        setTimeout(() => {
+            renderGroup(currentGroup);
+        }, 100);
     }, 30000); // Refresh every 30 seconds
-    
-    // Check settings every 2 seconds for admin changes (but don't override manual selection)
-    setInterval(function() {
-        const newSettings = loadDisplaySettings();
-        
-        // Show/hide fixtures based on setting
-        const matchesContainer = document.getElementById('matches-container');
-        if (matchesContainer) {
-            matchesContainer.style.display = newSettings.showFixtures ? 'block' : 'none';
-        }
-    }, 2000); // Check every 2 seconds
 });

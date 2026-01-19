@@ -1,51 +1,40 @@
-# Asian Men's Handball Championship 2026 - Tournament Management System
+# Asian Men's Handball Championship 2026 - Tournament Display
 
-A beautiful, interactive tournament management system with an admin panel and a clean output display page.
+A beautiful, interactive tournament display page that automatically fetches data from the Asian Handball website.
 
 ## Features
 
-- 🎛️ **Admin Panel** - Full control over tournament data
-- 📺 **Output Page** - Clean, professional display that updates automatically
+- 📺 **Live Display Page** - Clean, professional display that updates automatically
 - 🏆 View standings for all groups (A, B, C, D)
 - 📊 Interactive tournament tables with team positions, stats, and points
-- ⚽ Match schedules and results management
+- ⚽ Match schedules and results (optional)
 - 🎨 Beautiful graphical interface with custom background and fonts
 - 📱 Responsive design for mobile and desktop
 - 🚩 Local flag images for all teams
-- 💾 Data persistence using localStorage
+- 🔄 Auto-refreshes every 30 seconds with latest data
+- 🎯 Manual group selection in top-right corner
 
-## Pages
+## Output Page (`output.html`)
 
-### Admin Page (`admin.html`)
-- Manage tournament groups and teams
-- Edit team statistics (wins, losses, points, goal difference)
-- Add/edit/delete matches
-- Configure tournament title and subtitle
-- Export/import data as JSON
-- Reset to default data
-
-### Output Page (`output.html`)
-- Clean, professional display
-- Automatically reflects changes made in admin panel
-- Updates every 2 seconds to show latest changes
+- Automatically fetches data from the Asian Handball website
+- Manual group selection dropdown in top-right corner
+- Updates every 30 seconds with latest tournament data
 - Perfect for display on screens or projectors
+- Fixtures/matches hidden by default (can be enabled)
 
 ## Files Structure
 
 ### Core Files
-- `admin.html` - Admin panel interface
-- `admin.css` - Admin panel styling
-- `admin.js` - Admin functionality and data management
-- `output.html` - Clean output display page
-- `output.css` - Output page styling
-- `output.js` - Output display logic
+- `output.html` - Main display page
+- `output.css` - Display page styling
+- `output.js` - Display logic and data fetching
 
 ### Data Files
-- `data.js` - Default tournament data structure
+- `data.js` - Default tournament data structure (fallback)
 - `flag-mapping.js` - Mapping of team names to local flag files
 
 ### Assets
-- `FLAGS/` - Folder containing all team flag images
+- `Flags Updated/` - Folder containing all team flag images
 - `BACKDROP.png` - Background image
 - `Cairo-Bold.ttf` - Custom font
 
@@ -56,26 +45,16 @@ A beautiful, interactive tournament management system with an admin panel and a 
 
 ## Usage
 
-### Admin Mode
-1. Open `admin.html` in a web browser
-2. Navigate between Groups, Matches, and Settings tabs
-3. Edit teams, scores, and tournament information
-4. Click "Save All Changes" to persist updates
-5. Click "View Output Page" to see the display
-
-### Display Mode
-1. Open `output.html` in a web browser (or use the link from admin)
-2. Select groups using the dropdown menu
-3. The page automatically updates every 2 seconds with admin changes
+1. Open `output.html` in a web browser
+2. Use the dropdown in the top-right corner to select which group to display
+3. The page automatically fetches fresh data from the Asian Handball website every 30 seconds
 4. Perfect for displaying on screens during events
 
 ## Data Storage
 
-All tournament data is stored in the browser's localStorage. This means:
-- Changes persist across page reloads
-- Data is stored locally (no server required)
-- Each browser/user has their own data
-- Use Export/Import to share data between devices
+- Group selection is saved in localStorage (persists across page reloads)
+- Fixtures preference is saved in localStorage
+- Tournament data is automatically fetched from the website (no manual data entry needed)
 
 ## Flag Images
 
