@@ -240,15 +240,9 @@ function renderGroup(groupKey) {
     tableContainer.innerHTML = '';
     matchesContainer.innerHTML = '';
 
-    // Render table with group name headline and refresh button
-    const groupLetter = group.name.replace('Group ', '').replace('Cup Group ', 'C').replace('Main Round Group ', 'M').replace('Final Ranking', 'Final');
+    // Render table with group name headline
     let tableHTML = `
-        <div class="headline-container">
-            <h2 class="group-headline">${group.name.toUpperCase()}</h2>
-            <button id="refresh-btn" class="refresh-btn-below" onclick="manualRefresh()" title="Refresh Data">
-                🔄
-            </button>
-        </div>
+        <h2 class="group-headline">${group.name.toUpperCase()}</h2>
         <table>
             <thead>
                 <tr>
