@@ -13,27 +13,33 @@
         </button>
     </div>
     
-    <div class="group-selector-top-right">
-            <select id="group-select" class="group-select-top">
-                <optgroup label="Preliminary Groups">
-                    <option value="group-a">A</option>
-                    <option value="group-b">B</option>
-                    <option value="group-c">C</option>
-                    <option value="group-d">D</option>
-                </optgroup>
-                <optgroup label="Martyr Fahad Cup">
-                    <option value="cup-group-3">C3</option>
-                    <option value="cup-group-4">C4</option>
-                </optgroup>
-                <optgroup label="Main Round">
-                    <option value="main-group-1">M1</option>
-                    <option value="main-group-2">M2</option>
-                </optgroup>
-                <optgroup label="Final Rankings">
-                    <option value="final-ranking">Final</option>
-                </optgroup>
-            </select>
+    <div class="group-selector-column">
+            <div class="group-option" data-group="group-a" onclick="selectGroup('group-a')">A</div>
+            <div class="group-option" data-group="group-b" onclick="selectGroup('group-b')">B</div>
+            <div class="group-option" data-group="group-c" onclick="selectGroup('group-c')">C</div>
+            <div class="group-option" data-group="group-d" onclick="selectGroup('group-d')">D</div>
+            <div class="group-divider"></div>
+            <div class="group-option" data-group="cup-group-3" onclick="selectGroup('cup-group-3')">C3</div>
+            <div class="group-option" data-group="cup-group-4" onclick="selectGroup('cup-group-4')">C4</div>
+            <div class="group-divider"></div>
+            <div class="group-option" data-group="main-group-1" onclick="selectGroup('main-group-1')">M1</div>
+            <div class="group-option" data-group="main-group-2" onclick="selectGroup('main-group-2')">M2</div>
+            <div class="group-divider"></div>
+            <div class="group-option" data-group="final-ranking" onclick="selectGroup('final-ranking')">F</div>
         </div>
+    
+    <!-- Hidden select for compatibility -->
+    <select id="group-select" style="display: none;">
+        <option value="group-a">Group A</option>
+        <option value="group-b">Group B</option>
+        <option value="group-c">Group C</option>
+        <option value="group-d">Group D</option>
+        <option value="cup-group-3">Cup Group 3</option>
+        <option value="cup-group-4">Cup Group 4</option>
+        <option value="main-group-1">Main Round Group 1</option>
+        <option value="main-group-2">Main Round Group 2</option>
+        <option value="final-ranking">Final Ranking</option>
+    </select>
     
     <div class="output-container">
 

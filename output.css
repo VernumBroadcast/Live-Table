@@ -506,6 +506,13 @@ table td:nth-child(2) {
     }
 }
 
+/* Hide group selector column on 4:3 and smaller screens */
+@media (aspect-ratio: 4/3), (min-aspect-ratio: 1.2/1) and (max-aspect-ratio: 1.4/1), (max-width: 1024px) {
+    .group-selector-column {
+        display: none;
+    }
+}
+
 @media (max-width: 768px) {
     .refresh-btn-top-left {
         top: 10px;
@@ -517,15 +524,10 @@ table td:nth-child(2) {
         padding: 8px 12px;
     }
     
-    .group-selector-top-right {
-        top: 10px;
-        right: 10px;
+    .group-selector-column {
+        display: none;
     }
-    
-    .group-select-top {
-        padding: 6px 10px;
-        font-size: 1em;
-    }
+}
     
     .output-header h1,
     .matches-container h2 {

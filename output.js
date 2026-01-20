@@ -402,13 +402,39 @@ function renderGroup(groupKey) {
     }
 }
 
-// Get current selected group from dropdown
+// Get current selected group
 function getCurrentGroup() {
+    const activeOption = document.querySelector('.group-option.active');
+    if (activeOption && activeOption.dataset.group) {
+        return activeOption.dataset.group;
+    }
     const groupSelect = document.getElementById('group-select');
     if (groupSelect && groupSelect.value) {
         return groupSelect.value;
     }
     return 'group-a'; // Default
+}
+
+// Select group from column options
+function selectGroup(groupKey) {
+    // Update active state
+    document.querySelectorAll('.group-option').forEach(option => {
+        option.classList.remove('active');
+    });
+    const selectedOption = document.querySelector(`[data-group="${groupKey}"]`);
+    if (selectedOption) {
+        selectedOption.classList.add('active');
+    }
+    
+    // Update hidden select for compatibility
+    const groupSelect = document.getElementById('group-select');
+    if (groupSelect) {
+        groupSelect.value = groupKey;
+    }
+    
+    // Save and render
+    localStorage.setItem('selectedGroup', groupKey);
+    renderGroup(groupKey);
 }
 
 // Manual refresh function
@@ -445,18 +471,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Get saved group preference or default to group-a
     const savedGroup = localStorage.getItem('selectedGroup') || 'group-a';
-    const groupSelect = document.getElementById('group-select');
     
-    if (groupSelect) {
-        groupSelect.value = savedGroup;
-        
-        // Handle group selection change from top-right selector
-        groupSelect.addEventListener('change', function() {
-            const selectedGroup = this.value;
-            localStorage.setItem('selectedGroup', selectedGroup);
-            renderGroup(selectedGroup);
-        });
-    }
+    // Set active state on column options
+    selectGroup(savedGroup);
     
     // Render the initial group
     renderGroup(savedGroup);
