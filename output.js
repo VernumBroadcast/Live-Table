@@ -249,14 +249,55 @@ function parseTournamentData(doc) {
                         // Identify group by team composition
                         const hasGroup1Teams = tempTeams.some(t => 
                             t.includes('kuwait') || t.includes('japan') || 
-                            (t.includes('korea') && !t.includes('republic')) || t.includes('south korea')
+                            (t.includes('korea') && !t.includes('republic')) || t.includes('south korea') || t.includes('iraq')
                         );
                         const hasGroup2Teams = tempTeams.some(t => 
                             t.includes('bahrain') || t.includes('qatar') || 
                             t.includes('saudi') || t.includes('uae') || t.includes('united arab')
                         );
                         
-                        if (hasGroup1Teams && !parsedData['main-group-1']) {
+                        // Check for Cup Group teams (teams with codes like 3B, 3D, 4C, 4D, or teams that didn't make main round)
+                        const hasCupGroupTeams = tempTeams.some(t => 
+                            t.match(/^[34][abcd]/i) || // Team codes like 3B, 3D, 4C, 4D
+                            t.includes('oman') || t.includes('hong kong') || t.includes('india') ||
+                            t.includes('australia') || t.includes('iran') || t.includes('china')
+                        );
+                        
+                        // Check surrounding context for "Losers" or "Cup Group"
+                        let prev = table.previousElementSibling;
+                        let hasLosersContext = false;
+                        let losersGroupNum = null;
+                        for (let j = 0; j < 5 && prev; j++) {
+                            const prevText = prev.textContent.toLowerCase();
+                            if (prevText.includes('losers')) {
+                                hasLosersContext = true;
+                                // Try to extract group number
+                                const groupMatch = prevText.match(/group\s*([34])|([34])/);
+                                if (groupMatch) {
+                                    losersGroupNum = parseInt(groupMatch[1] || groupMatch[2]);
+                                }
+                                break;
+                            }
+                            prev = prev.previousElementSibling;
+                        }
+                        
+                        if (hasLosersContext && losersGroupNum === 3 && !parsedData['cup-group-3']) {
+                            groupName = 'Cup Group 3';
+                            groupKey = 'cup-group-3';
+                            console.log(`  ✓✓✓ Identified table ${index} as Cup Group 3 (Losers stage Group 3) by context`);
+                        } else if (hasLosersContext && losersGroupNum === 4 && !parsedData['cup-group-4']) {
+                            groupName = 'Cup Group 4';
+                            groupKey = 'cup-group-4';
+                            console.log(`  ✓✓✓ Identified table ${index} as Cup Group 4 (Losers stage Group 4) by context`);
+                        } else if (hasLosersContext && hasCupGroupTeams && !parsedData['cup-group-3']) {
+                            groupName = 'Cup Group 3';
+                            groupKey = 'cup-group-3';
+                            console.log(`  ✓✓✓ Identified table ${index} as Cup Group 3 (Losers stage) by team composition`);
+                        } else if (hasLosersContext && hasCupGroupTeams && !parsedData['cup-group-4'] && parsedData['cup-group-3']) {
+                            groupName = 'Cup Group 4';
+                            groupKey = 'cup-group-4';
+                            console.log(`  ✓✓✓ Identified table ${index} as Cup Group 4 (Losers stage) by team composition`);
+                        } else if (hasGroup1Teams && !parsedData['main-group-1']) {
                             groupName = 'Main Round Group 1';
                             groupKey = 'main-group-1';
                             console.log(`  ✓✓✓ Identified table ${index} as Main Round Group 1 by team composition`);
@@ -266,13 +307,29 @@ function parseTournamentData(doc) {
                             console.log(`  ✓✓✓ Identified table ${index} as Main Round Group 2 by team composition`);
                         }
                         
-                        // If not identified by teams, check surrounding context
+                        // If not identified by teams, check surrounding context more thoroughly
                         if (!groupKey) {
                             let prev = table.previousElementSibling;
                             let attempts = 0;
-                            while (prev && attempts < 10) {
-                                const text = prev.textContent.trim();
-                                if (text.match(/Main\s+Round.*Group\s*2/i) || text.match(/Main\s+Round\s+2/i) || (text.match(/^Group\s+2$/i) && hasGroup2Teams)) {
+                            while (prev && attempts < 15) {
+                                const text = prev.textContent.trim().toLowerCase();
+                                
+                                // Check for Losers stage with group numbers
+                                if (text.includes('losers') && (text.includes('group 3') || text.includes('group3') || text.includes(' 3'))) {
+                                    if (!parsedData['cup-group-3']) {
+                                        groupName = 'Cup Group 3';
+                                        groupKey = 'cup-group-3';
+                                        console.log(`  Found Cup Group 3 context: "${prev.textContent.trim().substring(0, 50)}"`);
+                                        break;
+                                    }
+                                } else if (text.includes('losers') && (text.includes('group 4') || text.includes('group4') || text.includes(' 4'))) {
+                                    if (!parsedData['cup-group-4']) {
+                                        groupName = 'Cup Group 4';
+                                        groupKey = 'cup-group-4';
+                                        console.log(`  Found Cup Group 4 context: "${prev.textContent.trim().substring(0, 50)}"`);
+                                        break;
+                                    }
+                                } else if (text.match(/Main\s+Round.*Group\s*2/i) || text.match(/Main\s+Round\s+2/i) || (text.match(/^Group\s+2$/i) && hasGroup2Teams)) {
                                     groupName = 'Main Round Group 2';
                                     groupKey = 'main-group-2';
                                     break;
@@ -280,14 +337,18 @@ function parseTournamentData(doc) {
                                     groupName = 'Main Round Group 1';
                                     groupKey = 'main-group-1';
                                     break;
-                            } else if (text.match(/Cup.*Group\s*3/i) || (text.match(/Losers\s+Stage/i) && text.match(/3|three/i)) || (text.match(/Losers/i) && text.match(/3|three/i))) {
-                                groupName = 'Cup Group 3';
-                                groupKey = 'cup-group-3';
-                                break;
-                            } else if (text.match(/Cup.*Group\s*4/i) || (text.match(/Losers\s+Stage/i) && text.match(/4|four/i)) || (text.match(/Losers/i) && text.match(/4|four/i))) {
-                                groupName = 'Cup Group 4';
-                                groupKey = 'cup-group-4';
-                                break;
+                                } else if (text.match(/Cup.*Group\s*3/i) || (text.match(/Losers\s+Stage/i) && text.match(/3|three/i)) || (text.match(/Losers/i) && text.match(/3|three/i))) {
+                                    if (!parsedData['cup-group-3']) {
+                                        groupName = 'Cup Group 3';
+                                        groupKey = 'cup-group-3';
+                                        break;
+                                    }
+                                } else if (text.match(/Cup.*Group\s*4/i) || (text.match(/Losers\s+Stage/i) && text.match(/4|four/i)) || (text.match(/Losers/i) && text.match(/4|four/i))) {
+                                    if (!parsedData['cup-group-4']) {
+                                        groupName = 'Cup Group 4';
+                                        groupKey = 'cup-group-4';
+                                        break;
+                                    }
                                 }
                                 prev = prev.previousElementSibling;
                                 attempts++;
