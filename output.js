@@ -110,11 +110,24 @@ function parseTournamentData(doc) {
     // Find all group sections - check h3, h4, and other headers
     const allHeaders = Array.from(doc.querySelectorAll('h1, h2, h3, h4, h5, h6, .group-title, [class*="group"], [id*="group"]'));
     
+    // Also check for divs and other elements that might contain group names
+    const allTextElements = Array.from(doc.querySelectorAll('div, p, span, td, th')).filter(el => {
+        const text = el.textContent.trim();
+        return (text.match(/Main\s+Round/i) || text.match(/Cup\s+Group/i) || text.match(/Group\s+[A-D]/i)) && 
+               el.children.length === 0; // Leaf nodes only
+    });
+    
     console.log(`Found ${allHeaders.length} potential headers:`, allHeaders.map(h => ({
         tag: h.tagName,
         text: h.textContent.trim().substring(0, 50),
         class: h.className,
         id: h.id
+    })));
+    
+    console.log(`Found ${allTextElements.length} text elements with group names:`, allTextElements.slice(0, 10).map(el => ({
+        tag: el.tagName,
+        text: el.textContent.trim().substring(0, 50),
+        class: el.className
     })));
     
     // Also try to find tables directly and infer groups from context
@@ -139,10 +152,10 @@ function parseTournamentData(doc) {
         } else if (headerText.match(/Cup.*Group\s*4/i) || headerText.match(/Cup\s+Group\s+4/i) || headerText.includes('Cup Group 4')) {
             console.log('Found Cup Group 4 header:', headerText);
             parsedData['cup-group-4'] = parseGroupFromHeader(doc, header, 'Cup Group 4', 'cup-group-4');
-        } else if (headerText.match(/Main\s+Round\s+Group\s*1/i) || headerText.match(/Main\s+Round.*1/i) || headerText.includes('Main Round Group 1') || headerText.includes('Main Round 1')) {
+        } else if (headerText.match(/Main\s+Round\s+Group\s*1/i) || headerText.match(/Main\s+Round.*1/i) || headerText.includes('Main Round Group 1') || headerText.includes('Main Round 1') || headerText.match(/^Main\s+Round\s+1$/i)) {
             console.log('Found Main Round Group 1 header:', headerText);
             parsedData['main-group-1'] = parseGroupFromHeader(doc, header, 'Main Round Group 1', 'main-group-1');
-        } else if (headerText.match(/Main\s+Round\s+Group\s*2/i) || headerText.match(/Main\s+Round.*2/i) || headerText.includes('Main Round Group 2') || headerText.includes('Main Round 2')) {
+        } else if (headerText.match(/Main\s+Round\s+Group\s*2/i) || headerText.match(/Main\s+Round.*2/i) || headerText.includes('Main Round Group 2') || headerText.includes('Main Round 2') || headerText.match(/^Main\s+Round\s+2$/i)) {
             console.log('Found Main Round Group 2 header:', headerText);
             parsedData['main-group-2'] = parseGroupFromHeader(doc, header, 'Main Round Group 2', 'main-group-2');
         } else if (headerText.match(/Final\s+Ranking/i) || headerText.includes('Final Ranking')) {
@@ -151,9 +164,12 @@ function parseTournamentData(doc) {
         }
     });
     
-    // If we didn't find headers, try to find tables by looking for common patterns
-    if (Object.keys(parsedData).length === 0 && allTables.length > 0) {
-        console.log('No headers matched, trying to find tables by structure...');
+    // If second stage groups weren't found, try to find tables by looking for common patterns
+    const missingGroups = ['main-group-1', 'main-group-2', 'cup-group-3', 'cup-group-4'].filter(key => !parsedData[key]);
+    
+    if (missingGroups.length > 0 && allTables.length > 0) {
+        console.log(`Missing groups: ${missingGroups.join(', ')}, searching ${allTables.length} tables...`);
+        
         // Try to parse tables directly if headers aren't found
         allTables.forEach((table, index) => {
             const rows = table.querySelectorAll('tr');
@@ -165,31 +181,88 @@ function parseTournamentData(doc) {
                     const headerTexts = Array.from(headers).map(h => h.textContent.trim().toLowerCase());
                     if (headerTexts.some(h => h.includes('pos') || h.includes('team') || h.includes('pld'))) {
                         console.log(`Found potential tournament table ${index} with ${rows.length} rows`);
-                        // Try to infer group name from surrounding context
-                        let groupName = `Table ${index + 1}`;
+                        
+                        // Look for group name in surrounding context (more thoroughly)
+                        let groupName = null;
                         let groupKey = null;
                         
-                        // Look for group name in previous siblings
+                        // Check previous siblings
                         let prev = table.previousElementSibling;
                         let attempts = 0;
-                        while (prev && attempts < 5) {
+                        while (prev && attempts < 10) {
                             const text = prev.textContent.trim();
-                            if (text.match(/Main\s+Round.*2/i)) {
+                            if (text.match(/Main\s+Round.*Group\s*2/i) || text.match(/Main\s+Round\s+2/i)) {
                                 groupName = 'Main Round Group 2';
                                 groupKey = 'main-group-2';
                                 break;
-                            } else if (text.match(/Main\s+Round.*1/i)) {
+                            } else if (text.match(/Main\s+Round.*Group\s*1/i) || text.match(/Main\s+Round\s+1/i)) {
                                 groupName = 'Main Round Group 1';
                                 groupKey = 'main-group-1';
+                                break;
+                            } else if (text.match(/Cup.*Group\s*3/i)) {
+                                groupName = 'Cup Group 3';
+                                groupKey = 'cup-group-3';
+                                break;
+                            } else if (text.match(/Cup.*Group\s*4/i)) {
+                                groupName = 'Cup Group 4';
+                                groupKey = 'cup-group-4';
                                 break;
                             }
                             prev = prev.previousElementSibling;
                             attempts++;
                         }
                         
-                        if (groupKey && !parsedData[groupKey]) {
-                            console.log(`Attempting to parse ${groupName} from table structure`);
-                            parsedData[groupKey] = parseGroupFromTable(table, groupName, groupKey);
+                        // Also check parent and parent's previous siblings
+                        if (!groupKey && table.parentElement) {
+                            let parentPrev = table.parentElement.previousElementSibling;
+                            attempts = 0;
+                            while (parentPrev && attempts < 5) {
+                                const text = parentPrev.textContent.trim();
+                                if (text.match(/Main\s+Round.*Group\s*2/i) || text.match(/Main\s+Round\s+2/i)) {
+                                    groupName = 'Main Round Group 2';
+                                    groupKey = 'main-group-2';
+                                    break;
+                                } else if (text.match(/Main\s+Round.*Group\s*1/i) || text.match(/Main\s+Round\s+1/i)) {
+                                    groupName = 'Main Round Group 1';
+                                    groupKey = 'main-group-1';
+                                    break;
+                                } else if (text.match(/Cup.*Group\s*3/i)) {
+                                    groupName = 'Cup Group 3';
+                                    groupKey = 'cup-group-3';
+                                    break;
+                                } else if (text.match(/Cup.*Group\s*4/i)) {
+                                    groupName = 'Cup Group 4';
+                                    groupKey = 'cup-group-4';
+                                    break;
+                                }
+                                parentPrev = parentPrev.previousElementSibling;
+                                attempts++;
+                            }
+                        }
+                        
+                        // Check table rows for team codes that indicate which group (1A, 1C = Main Round Group 1; 2A, 2C = Main Round Group 2)
+                        if (!groupKey && rows.length > 1) {
+                            const secondRow = rows[1];
+                            const teamCell = secondRow.querySelectorAll('td')[1];
+                            if (teamCell) {
+                                const teamText = teamCell.textContent.trim();
+                                if (teamText.match(/^1[ABCD]/)) {
+                                    groupName = 'Main Round Group 1';
+                                    groupKey = 'main-group-1';
+                                } else if (teamText.match(/^2[ABCD]/)) {
+                                    groupName = 'Main Round Group 2';
+                                    groupKey = 'main-group-2';
+                                }
+                            }
+                        }
+                        
+                        if (groupKey && !parsedData[groupKey] && missingGroups.includes(groupKey)) {
+                            console.log(`Attempting to parse ${groupName} from table structure (table ${index})`);
+                            const parsed = parseGroupFromTable(table, groupName, groupKey);
+                            if (parsed && parsed.teams && parsed.teams.length > 0) {
+                                parsedData[groupKey] = parsed;
+                                console.log(`Successfully parsed ${groupName} with ${parsed.teams.length} teams`);
+                            }
                         }
                     }
                 }
@@ -224,21 +297,17 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
     
     // Search for the table (might be in next few siblings or parent containers)
     let attempts = 0;
-    while (currentElement && attempts < 20) {
+    while (currentElement && attempts < 30) {
         if (currentElement.tagName === 'TABLE') {
             table = currentElement;
+            console.log(`Found table as direct sibling at attempt ${attempts}`);
             break;
         }
         // Check children for table
         const childTable = currentElement.querySelector('table');
         if (childTable) {
             table = childTable;
-            break;
-        }
-        // Also check if current element is a container that might have a table nearby
-        const nearbyTable = currentElement.querySelector('table');
-        if (nearbyTable) {
-            table = nearbyTable;
+            console.log(`Found table in child at attempt ${attempts}`);
             break;
         }
         currentElement = currentElement.nextElementSibling;
@@ -249,13 +318,31 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
     if (!table && header.parentElement) {
         let parentSibling = header.parentElement.nextElementSibling;
         attempts = 0;
-        while (parentSibling && attempts < 10) {
+        while (parentSibling && attempts < 15) {
             const foundTable = parentSibling.querySelector('table');
             if (foundTable) {
                 table = foundTable;
+                console.log(`Found table in parent sibling at attempt ${attempts}`);
                 break;
             }
             parentSibling = parentSibling.nextElementSibling;
+            attempts++;
+        }
+    }
+    
+    // Also try searching backwards and forwards from header's parent
+    if (!table && header.parentElement) {
+        // Search forward from parent
+        let searchElement = header.parentElement;
+        attempts = 0;
+        while (searchElement && attempts < 20) {
+            const foundTable = searchElement.querySelector('table');
+            if (foundTable && foundTable.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_PRECEDING) {
+                table = foundTable;
+                console.log(`Found table after searching forward from parent`);
+                break;
+            }
+            searchElement = searchElement.nextElementSibling;
             attempts++;
         }
     }
