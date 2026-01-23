@@ -224,47 +224,85 @@ function parseTournamentData(doc) {
                     if (headerTexts.some(h => h.includes('pos') || h.includes('team') || h.includes('pld'))) {
                         console.log(`Found potential tournament table ${index} with ${rows.length} rows`);
                         
-                        // Look for group name in surrounding context (more thoroughly)
+                        // First, try to identify by team composition (most reliable)
                         let groupName = null;
                         let groupKey = null;
                         
-                        // Check previous siblings
-                        let prev = table.previousElementSibling;
-                        let attempts = 0;
-                        while (prev && attempts < 10) {
-                            const text = prev.textContent.trim();
-                            if (text.match(/Main\s+Round.*Group\s*2/i) || text.match(/Main\s+Round\s+2/i)) {
-                                groupName = 'Main Round Group 2';
-                                groupKey = 'main-group-2';
-                                break;
-                            } else if (text.match(/Main\s+Round.*Group\s*1/i) || text.match(/Main\s+Round\s+1/i)) {
-                                groupName = 'Main Round Group 1';
-                                groupKey = 'main-group-1';
-                                break;
-                            } else if (text.match(/Cup.*Group\s*3/i)) {
-                                groupName = 'Cup Group 3';
-                                groupKey = 'cup-group-3';
-                                break;
-                            } else if (text.match(/Cup.*Group\s*4/i)) {
-                                groupName = 'Cup Group 4';
-                                groupKey = 'cup-group-4';
-                                break;
+                        // Parse teams from this table to identify the group
+                        const tempTeams = [];
+                        for (let i = 1; i < Math.min(rows.length, 6); i++) {
+                            const row = rows[i];
+                            if (row.querySelector('th')) continue;
+                            const cells = row.querySelectorAll('td');
+                            if (cells.length >= 2) {
+                                const teamCell = cells[1].cloneNode(true);
+                                teamCell.querySelectorAll('img, svg').forEach(el => el.remove());
+                                const teamName = teamCell.textContent.trim().toLowerCase();
+                                if (teamName) tempTeams.push(teamName);
                             }
-                            prev = prev.previousElementSibling;
-                            attempts++;
+                        }
+                        
+                        console.log(`  Table ${index} teams: ${tempTeams.join(', ')}`);
+                        
+                        // Identify group by team composition
+                        const hasGroup1Teams = tempTeams.some(t => 
+                            t.includes('kuwait') || t.includes('japan') || 
+                            (t.includes('korea') && !t.includes('republic')) || t.includes('south korea')
+                        );
+                        const hasGroup2Teams = tempTeams.some(t => 
+                            t.includes('bahrain') || t.includes('qatar') || 
+                            t.includes('saudi') || t.includes('uae') || t.includes('united arab')
+                        );
+                        
+                        if (hasGroup1Teams && !parsedData['main-group-1']) {
+                            groupName = 'Main Round Group 1';
+                            groupKey = 'main-group-1';
+                            console.log(`  ✓✓✓ Identified table ${index} as Main Round Group 1 by team composition`);
+                        } else if (hasGroup2Teams && !parsedData['main-group-2']) {
+                            groupName = 'Main Round Group 2';
+                            groupKey = 'main-group-2';
+                            console.log(`  ✓✓✓ Identified table ${index} as Main Round Group 2 by team composition`);
+                        }
+                        
+                        // If not identified by teams, check surrounding context
+                        if (!groupKey) {
+                            let prev = table.previousElementSibling;
+                            let attempts = 0;
+                            while (prev && attempts < 10) {
+                                const text = prev.textContent.trim();
+                                if (text.match(/Main\s+Round.*Group\s*2/i) || text.match(/Main\s+Round\s+2/i) || (text.match(/^Group\s+2$/i) && hasGroup2Teams)) {
+                                    groupName = 'Main Round Group 2';
+                                    groupKey = 'main-group-2';
+                                    break;
+                                } else if (text.match(/Main\s+Round.*Group\s*1/i) || text.match(/Main\s+Round\s+1/i) || (text.match(/^Group\s+1$/i) && hasGroup1Teams)) {
+                                    groupName = 'Main Round Group 1';
+                                    groupKey = 'main-group-1';
+                                    break;
+                                } else if (text.match(/Cup.*Group\s*3/i)) {
+                                    groupName = 'Cup Group 3';
+                                    groupKey = 'cup-group-3';
+                                    break;
+                                } else if (text.match(/Cup.*Group\s*4/i)) {
+                                    groupName = 'Cup Group 4';
+                                    groupKey = 'cup-group-4';
+                                    break;
+                                }
+                                prev = prev.previousElementSibling;
+                                attempts++;
+                            }
                         }
                         
                         // Also check parent and parent's previous siblings
                         if (!groupKey && table.parentElement) {
                             let parentPrev = table.parentElement.previousElementSibling;
-                            attempts = 0;
+                            let attempts = 0;
                             while (parentPrev && attempts < 5) {
                                 const text = parentPrev.textContent.trim();
-                                if (text.match(/Main\s+Round.*Group\s*2/i) || text.match(/Main\s+Round\s+2/i)) {
+                                if (text.match(/Main\s+Round.*Group\s*2/i) || text.match(/Main\s+Round\s+2/i) || (text.match(/^Group\s+2$/i) && hasGroup2Teams)) {
                                     groupName = 'Main Round Group 2';
                                     groupKey = 'main-group-2';
                                     break;
-                                } else if (text.match(/Main\s+Round.*Group\s*1/i) || text.match(/Main\s+Round\s+1/i)) {
+                                } else if (text.match(/Main\s+Round.*Group\s*1/i) || text.match(/Main\s+Round\s+1/i) || (text.match(/^Group\s+1$/i) && hasGroup1Teams)) {
                                     groupName = 'Main Round Group 1';
                                     groupKey = 'main-group-1';
                                     break;
@@ -586,13 +624,13 @@ function parseFlashscoreData(doc, url) {
     console.log('Parsing Flashscore data...');
     const parsedData = {};
     
-    // Flashscore typically uses specific class names for standings tables
-    // Look for tables with class names like 'table__standings', 'standings', etc.
-    const standingsTables = doc.querySelectorAll('table.standings, table.table__standings, .standings table, [class*="standings"] table, table');
+    // Flashscore uses JavaScript-rendered content, so we need to look for data in script tags or specific divs
+    // Try to find standings data in various possible locations
+    const standingsContainers = doc.querySelectorAll('.standings, [class*="standings"], [id*="standings"], .table, table');
     
-    console.log(`Found ${standingsTables.length} Flashscore standings tables`);
+    console.log(`Found ${standingsContainers.length} potential Flashscore containers`);
     
-    // Try to determine which group this is based on URL or content
+    // Try to determine which group this is based on URL
     let groupKey = null;
     let groupName = null;
     
@@ -604,11 +642,27 @@ function parseFlashscoreData(doc, url) {
         groupName = 'Main Round Group 2';
     }
     
-    standingsTables.forEach((table, index) => {
-        console.log(`Processing Flashscore table ${index}...`);
-        
+    // Look for tables with standings data
+    const tables = doc.querySelectorAll('table');
+    console.log(`Found ${tables.length} tables in Flashscore page`);
+    
+    tables.forEach((table, index) => {
         const rows = table.querySelectorAll('tr');
         if (rows.length < 2) return;
+        
+        // Check if this looks like a standings table
+        const firstRow = rows[0];
+        const headers = firstRow.querySelectorAll('th, td');
+        const headerTexts = Array.from(headers).map(h => h.textContent.trim().toLowerCase());
+        
+        // Look for standings indicators
+        const hasStandingsHeaders = headerTexts.some(h => 
+            h.includes('mp') || h.includes('played') || h.includes('w') || h.includes('pts') || h.includes('points')
+        );
+        
+        if (!hasStandingsHeaders && headers.length < 6) return;
+        
+        console.log(`Processing Flashscore table ${index} with ${rows.length} rows...`);
         
         const teams = [];
         
@@ -619,40 +673,56 @@ function parseFlashscoreData(doc, url) {
             const cells = row.querySelectorAll('td');
             if (cells.length < 3) return;
             
-            // Flashscore typically has: Position, Team, Played, Won, Drawn, Lost, Goals For, Goals Against, Goal Diff, Points
-            // But structure may vary, so we'll be flexible
-            
+            // Flashscore format: #, Team, MP, W, D, L, G (Goals For:Against), PTS, FORM
             const posText = cells[0]?.textContent.trim() || '';
             const pos = parseInt(posText) || (teams.length + 1);
             
-            // Team name is usually in second cell
+            // Team name - usually second cell
             const teamCell = cells[1];
             const teamCellClone = teamCell.cloneNode(true);
-            teamCellClone.querySelectorAll('img, svg, .flag').forEach(el => el.remove());
+            teamCellClone.querySelectorAll('img, svg, .flag, [class*="flag"]').forEach(el => el.remove());
             let teamName = teamCellClone.textContent.trim();
+            
+            // Clean up team name
+            teamName = teamName.replace(/\s+/g, ' ').trim();
             
             if (!teamName || teamName.length < 1) return;
             
-            // Parse stats - Flashscore usually has more columns
+            // Parse stats - Flashscore format varies, try different positions
             let pld = 0, w = 0, d = 0, l = 0, diff = 0, pts = 0;
             
-            // Try to find stats columns (usually columns 2-8)
+            // Try to find MP (matches played) - could be in different positions
+            for (let i = 2; i < Math.min(cells.length, 10); i++) {
+                const cellText = cells[i]?.textContent.trim() || '';
+                const num = parseInt(cellText);
+                if (!isNaN(num) && num >= 0 && num <= 10) {
+                    // This might be MP, W, D, L, or PTS
+                    if (pld === 0 && i === 2) pld = num;
+                    else if (w === 0 && i === 3) w = num;
+                    else if (d === 0 && i === 4) d = num;
+                    else if (l === 0 && i === 5) l = num;
+                    else if (pts === 0 && i >= 7) pts = num;
+                }
+            }
+            
+            // Try specific positions based on Flashscore structure
             if (cells.length >= 8) {
-                pld = parseInt(cells[2]?.textContent.trim()) || 0;
-                w = parseInt(cells[3]?.textContent.trim()) || 0;
-                d = parseInt(cells[4]?.textContent.trim()) || 0;
-                l = parseInt(cells[5]?.textContent.trim()) || 0;
-                // Goal difference might be in different positions
-                const diffText = cells[6]?.textContent.trim() || cells[7]?.textContent.trim() || '0';
-                diff = parseInt(diffText.replace(/[^\d-]/g, '')) || 0;
-                pts = parseInt(cells[cells.length - 1]?.textContent.trim()) || 0;
-            } else if (cells.length >= 6) {
-                // Simpler format
-                pld = parseInt(cells[2]?.textContent.trim()) || 0;
-                w = parseInt(cells[3]?.textContent.trim()) || 0;
-                d = parseInt(cells[4]?.textContent.trim()) || 0;
-                l = parseInt(cells[5]?.textContent.trim()) || 0;
-                pts = parseInt(cells[cells.length - 1]?.textContent.trim()) || 0;
+                // Format: #, Team, MP, W, D, L, G, PTS
+                pld = parseInt(cells[2]?.textContent.trim()) || pld || 0;
+                w = parseInt(cells[3]?.textContent.trim()) || w || 0;
+                d = parseInt(cells[4]?.textContent.trim()) || d || 0;
+                l = parseInt(cells[5]?.textContent.trim()) || l || 0;
+                // Goals column might be "29:16" format
+                const goalsText = cells[6]?.textContent.trim() || '';
+                if (goalsText.includes(':')) {
+                    const [goalsFor, goalsAgainst] = goalsText.split(':').map(n => parseInt(n) || 0);
+                    diff = goalsFor - goalsAgainst;
+                }
+                pts = parseInt(cells[7]?.textContent.trim()) || pts || 0;
+            }
+            
+            if (rowIndex <= 2) {
+                console.log(`  Row ${rowIndex}: ${teamName} - MP:${pld}, W:${w}, D:${d}, L:${l}, PTS:${pts}`);
             }
             
             teams.push({
@@ -669,7 +739,7 @@ function parseFlashscoreData(doc, url) {
         });
         
         if (teams.length > 0 && groupKey) {
-            console.log(`✓ Parsed ${teams.length} teams for ${groupName} from Flashscore`);
+            console.log(`✓✓✓ Successfully parsed ${teams.length} teams for ${groupName} from Flashscore`);
             parsedData[groupKey] = {
                 name: groupName,
                 teams: teams,
