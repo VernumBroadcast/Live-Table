@@ -208,9 +208,15 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
         const cells = row.querySelectorAll('td');
         if (cells.length < 2) return;
         
-        // Position (first cell)
+        // Position (first cell) - handle different formats
         const posText = cells[0].textContent.trim();
-        const pos = parseInt(posText) || (index + 1);
+        let pos = parseInt(posText);
+        // If position is not a number, try to extract it or use index
+        if (isNaN(pos)) {
+            // Try to find a number in the cell
+            const posMatch = posText.match(/\d+/);
+            pos = posMatch ? parseInt(posMatch[0]) : (teams.length + 1);
+        }
         
         // Team name (second cell) - get text but remove flag images
         const teamCell = cells[1];
@@ -218,25 +224,44 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
         const teamCellClone = teamCell.cloneNode(true);
         // Remove images from clone
         teamCellClone.querySelectorAll('img').forEach(img => img.remove());
-        const teamName = teamCellClone.textContent.trim().replace(/\s+/g, ' ').split('\n')[0].trim();
+        // Remove any SVG elements
+        teamCellClone.querySelectorAll('svg').forEach(svg => svg.remove());
+        let teamName = teamCellClone.textContent.trim().replace(/\s+/g, ' ').split('\n')[0].trim();
         
-        if (!teamName || teamName === '' || teamName.length < 1) return;
+        // Clean up team name - remove extra whitespace and special characters
+        teamName = teamName.replace(/^\s+|\s+$/g, '').replace(/\s{2,}/g, ' ');
+        
+        if (!teamName || teamName === '' || teamName.length < 1) {
+            console.log(`Skipping row ${index} - no team name found`);
+            return;
+        }
+        
+        console.log(`Parsing team: ${teamName}, position: ${pos}, cells: ${cells.length}`);
         
         // Parse stats if available - check for different table structures
         let pld = 0, w = 0, d = 0, l = 0, diff = 0, pts = 0;
         
         // Try different cell positions (some tables might have different structures)
+        // Check if we have enough cells for stats
         if (cells.length >= 8) {
             // Standard format: Pos, Team, Pld, W, D, L, Diff, Pts
-            pld = parseInt(cells[2]?.textContent.trim()) || 0;
-            w = parseInt(cells[3]?.textContent.trim()) || 0;
-            d = parseInt(cells[4]?.textContent.trim()) || 0;
-            l = parseInt(cells[5]?.textContent.trim()) || 0;
+            const pldText = cells[2]?.textContent.trim() || '0';
+            const wText = cells[3]?.textContent.trim() || '0';
+            const dText = cells[4]?.textContent.trim() || '0';
+            const lText = cells[5]?.textContent.trim() || '0';
             const diffText = cells[6]?.textContent.trim() || '0';
+            const ptsText = cells[7]?.textContent.trim() || '0';
+            
+            pld = parseInt(pldText) || 0;
+            w = parseInt(wText) || 0;
+            d = parseInt(dText) || 0;
+            l = parseInt(lText) || 0;
             diff = parseInt(diffText.replace(/[^\d-]/g, '')) || 0;
-            pts = parseInt(cells[7]?.textContent.trim()) || 0;
+            pts = parseInt(ptsText) || 0;
+            
+            console.log(`  Stats: Pld=${pld}, W=${w}, D=${d}, L=${l}, Diff=${diff}, Pts=${pts}`);
         } else if (cells.length >= 7) {
-            // Alternative format
+            // Alternative format - might be missing one column
             pld = parseInt(cells[2]?.textContent.trim()) || 0;
             w = parseInt(cells[3]?.textContent.trim()) || 0;
             d = parseInt(cells[4]?.textContent.trim()) || 0;
@@ -244,6 +269,9 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
             const diffText = cells[6]?.textContent.trim() || '0';
             diff = parseInt(diffText.replace(/[^\d-]/g, '')) || 0;
             pts = 0; // Points might be calculated
+        } else if (cells.length >= 3) {
+            // Minimal format - at least try to get position and name
+            console.log(`  Minimal format detected, cells: ${cells.length}`);
         }
         
         teams.push({
