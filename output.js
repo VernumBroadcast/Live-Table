@@ -4,7 +4,9 @@ let displayData = {};
 // Fetch data from Flashscore (better structured data)
 async function fetchTournamentData() {
     // Flashscore URLs for different groups/stages
-    // These appear to be for Main Round Group 1 and Group 2
+    // KYBijenD = Main Round Group 1
+    // W2tz5f16 = Main Round Group 2 (or Losers stage/Cup Group 3 - need to check)
+    // Need to find URLs for Cup Group 3 (Losers stage) and Cup Group 4
     const flashscoreUrls = [
         'https://www.flashscore.info/handball/asia/asian-championship/standings/#/KYBijenD/standings/',
         'https://www.flashscore.info/handball/asia/asian-championship/standings/#/W2tz5f16/standings/'
@@ -164,11 +166,11 @@ function parseTournamentData(doc) {
             parsedData['group-c'] = parseGroupFromHeader(doc, header, 'Group C', 'group-c');
         } else if (headerText.match(/Group\s+D\b/i) || headerText.includes('Group D')) {
             parsedData['group-d'] = parseGroupFromHeader(doc, header, 'Group D', 'group-d');
-        } else if (headerText.match(/Cup.*Group\s*3/i) || headerText.match(/Cup\s+Group\s+3/i) || headerText.includes('Cup Group 3')) {
-            console.log('Found Cup Group 3 header:', headerText);
+        } else if (headerText.match(/Cup.*Group\s*3/i) || headerText.match(/Cup\s+Group\s+3/i) || headerText.includes('Cup Group 3') || (headerText.match(/Losers\s+Stage/i) && headerText.match(/3|three/i)) || (headerText.match(/Losers/i) && headerText.match(/3|three/i))) {
+            console.log('Found Cup Group 3 / Losers Stage Group 3 header:', headerText);
             parsedData['cup-group-3'] = parseGroupFromHeader(doc, header, 'Cup Group 3', 'cup-group-3');
-        } else if (headerText.match(/Cup.*Group\s*4/i) || headerText.match(/Cup\s+Group\s+4/i) || headerText.includes('Cup Group 4')) {
-            console.log('Found Cup Group 4 header:', headerText);
+        } else if (headerText.match(/Cup.*Group\s*4/i) || headerText.match(/Cup\s+Group\s+4/i) || headerText.includes('Cup Group 4') || (headerText.match(/Losers\s+Stage/i) && headerText.match(/4|four/i)) || (headerText.match(/Losers/i) && headerText.match(/4|four/i))) {
+            console.log('Found Cup Group 4 / Losers Stage Group 4 header:', headerText);
             parsedData['cup-group-4'] = parseGroupFromHeader(doc, header, 'Cup Group 4', 'cup-group-4');
         } else if (headerText.match(/Main\s+Round\s+Group\s*1/i) || headerText.match(/Main\s+Round.*1/i) || headerText.includes('Main Round Group 1') || headerText.includes('Main Round 1') || headerText.match(/^Main\s+Round\s+1$/i)) {
             console.log('Found Main Round Group 1 header:', headerText);
@@ -278,14 +280,14 @@ function parseTournamentData(doc) {
                                     groupName = 'Main Round Group 1';
                                     groupKey = 'main-group-1';
                                     break;
-                                } else if (text.match(/Cup.*Group\s*3/i)) {
-                                    groupName = 'Cup Group 3';
-                                    groupKey = 'cup-group-3';
-                                    break;
-                                } else if (text.match(/Cup.*Group\s*4/i)) {
-                                    groupName = 'Cup Group 4';
-                                    groupKey = 'cup-group-4';
-                                    break;
+                            } else if (text.match(/Cup.*Group\s*3/i) || (text.match(/Losers\s+Stage/i) && text.match(/3|three/i)) || (text.match(/Losers/i) && text.match(/3|three/i))) {
+                                groupName = 'Cup Group 3';
+                                groupKey = 'cup-group-3';
+                                break;
+                            } else if (text.match(/Cup.*Group\s*4/i) || (text.match(/Losers\s+Stage/i) && text.match(/4|four/i)) || (text.match(/Losers/i) && text.match(/4|four/i))) {
+                                groupName = 'Cup Group 4';
+                                groupKey = 'cup-group-4';
+                                break;
                                 }
                                 prev = prev.previousElementSibling;
                                 attempts++;
@@ -306,14 +308,14 @@ function parseTournamentData(doc) {
                                     groupName = 'Main Round Group 1';
                                     groupKey = 'main-group-1';
                                     break;
-                                } else if (text.match(/Cup.*Group\s*3/i)) {
-                                    groupName = 'Cup Group 3';
-                                    groupKey = 'cup-group-3';
-                                    break;
-                                } else if (text.match(/Cup.*Group\s*4/i)) {
-                                    groupName = 'Cup Group 4';
-                                    groupKey = 'cup-group-4';
-                                    break;
+                            } else if (text.match(/Cup.*Group\s*3/i) || (text.match(/Losers\s+Stage/i) && text.match(/3|three/i)) || (text.match(/Losers/i) && text.match(/3|three/i))) {
+                                groupName = 'Cup Group 3';
+                                groupKey = 'cup-group-3';
+                                break;
+                            } else if (text.match(/Cup.*Group\s*4/i) || (text.match(/Losers\s+Stage/i) && text.match(/4|four/i)) || (text.match(/Losers/i) && text.match(/4|four/i))) {
+                                groupName = 'Cup Group 4';
+                                groupKey = 'cup-group-4';
+                                break;
                                 }
                                 parentPrev = parentPrev.previousElementSibling;
                                 attempts++;
@@ -630,7 +632,7 @@ function parseFlashscoreData(doc, url) {
     
     console.log(`Found ${standingsContainers.length} potential Flashscore containers`);
     
-    // Try to determine which group this is based on URL
+    // Try to determine which group this is based on URL and content
     let groupKey = null;
     let groupName = null;
     
@@ -638,8 +640,9 @@ function parseFlashscoreData(doc, url) {
         groupKey = 'main-group-1';
         groupName = 'Main Round Group 1';
     } else if (url.includes('W2tz5f16')) {
-        groupKey = 'main-group-2';
-        groupName = 'Main Round Group 2';
+        // This might be Main Round Group 2 or Losers stage (Cup Group 3)
+        // We'll identify by content
+        groupKey = null; // Will be determined by content
     }
     
     // Look for tables with standings data
@@ -738,13 +741,67 @@ function parseFlashscoreData(doc, url) {
             });
         });
         
-        if (teams.length > 0 && groupKey) {
-            console.log(`✓✓✓ Successfully parsed ${teams.length} teams for ${groupName} from Flashscore`);
-            parsedData[groupKey] = {
-                name: groupName,
-                teams: teams,
-                matches: tournamentData[groupKey]?.matches || []
-            };
+        if (teams.length > 0) {
+            // If groupKey wasn't set by URL, try to identify by content
+            if (!groupKey) {
+                // Check for "Losers stage" or "Losers" in page content
+                const pageText = doc.body.textContent.toLowerCase();
+                const hasLosersStage = pageText.includes('losers') || pageText.includes('losers stage');
+                const hasLosers3 = pageText.includes('losers') && (pageText.includes('group 3') || pageText.includes('group3') || pageText.includes('3'));
+                const hasLosers4 = pageText.includes('losers') && (pageText.includes('group 4') || pageText.includes('group4') || pageText.includes('4'));
+                
+                // Check team composition to identify group
+                const teamNames = teams.map(t => t.name.toLowerCase());
+                const hasGroup1Teams = teamNames.some(t => 
+                    t.includes('kuwait') || t.includes('japan') || 
+                    (t.includes('korea') && !t.includes('republic')) || t.includes('south korea') || t.includes('iraq')
+                );
+                const hasGroup2Teams = teamNames.some(t => 
+                    t.includes('bahrain') || t.includes('qatar') || 
+                    t.includes('saudi') || t.includes('uae') || t.includes('united arab')
+                );
+                
+                // Check if it's Losers stage Group 3 or Group 4
+                if (hasLosersStage) {
+                    // Determine which Losers stage group (3 or 4)
+                    if (hasLosers3 && !parsedData['cup-group-3']) {
+                        groupKey = 'cup-group-3';
+                        groupName = 'Cup Group 3';
+                        console.log(`Identified as Cup Group 3 (Losers stage Group 3) from Flashscore`);
+                    } else if (hasLosers4 && !parsedData['cup-group-4']) {
+                        groupKey = 'cup-group-4';
+                        groupName = 'Cup Group 4';
+                        console.log(`Identified as Cup Group 4 (Losers stage Group 4) from Flashscore`);
+                    } else if (!parsedData['cup-group-3']) {
+                        // Fallback: assign to cup-group-3 if not already parsed
+                        groupKey = 'cup-group-3';
+                        groupName = 'Cup Group 3';
+                        console.log(`Identified as Cup Group 3 (Losers stage) from Flashscore (fallback)`);
+                    } else if (!parsedData['cup-group-4']) {
+                        // Fallback: assign to cup-group-4 if cup-group-3 already exists
+                        groupKey = 'cup-group-4';
+                        groupName = 'Cup Group 4';
+                        console.log(`Identified as Cup Group 4 (Losers stage) from Flashscore (fallback)`);
+                    }
+                } else if (hasGroup1Teams && !parsedData['main-group-1']) {
+                    groupKey = 'main-group-1';
+                    groupName = 'Main Round Group 1';
+                } else if (hasGroup2Teams && !parsedData['main-group-2']) {
+                    groupKey = 'main-group-2';
+                    groupName = 'Main Round Group 2';
+                }
+            }
+            
+            if (groupKey) {
+                console.log(`✓✓✓ Successfully parsed ${teams.length} teams for ${groupName} from Flashscore`);
+                parsedData[groupKey] = {
+                    name: groupName,
+                    teams: teams,
+                    matches: tournamentData[groupKey]?.matches || []
+                };
+            } else {
+                console.log(`⚠ Parsed ${teams.length} teams from Flashscore but couldn't identify group`);
+            }
         }
     });
     
