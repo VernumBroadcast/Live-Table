@@ -90,7 +90,7 @@ function parseTournamentData(doc) {
     allHeaders.forEach(header => {
         const headerText = header.textContent.trim();
         
-        // Check if this is a group header
+        // Check if this is a group header - parse all groups including second stage
         if (headerText.includes('Group A')) {
             parsedData['group-a'] = parseGroupFromHeader(doc, header, 'Group A', 'group-a');
         } else if (headerText.includes('Group B')) {
@@ -99,6 +99,16 @@ function parseTournamentData(doc) {
             parsedData['group-c'] = parseGroupFromHeader(doc, header, 'Group C', 'group-c');
         } else if (headerText.includes('Group D')) {
             parsedData['group-d'] = parseGroupFromHeader(doc, header, 'Group D', 'group-d');
+        } else if (headerText.includes('Cup Group 3') || headerText.includes('Cup group 3') || headerText.match(/Cup.*3/i)) {
+            parsedData['cup-group-3'] = parseGroupFromHeader(doc, header, 'Cup Group 3', 'cup-group-3');
+        } else if (headerText.includes('Cup Group 4') || headerText.includes('Cup group 4') || headerText.match(/Cup.*4/i)) {
+            parsedData['cup-group-4'] = parseGroupFromHeader(doc, header, 'Cup Group 4', 'cup-group-4');
+        } else if (headerText.includes('Main Round Group 1') || headerText.includes('Main round group 1') || headerText.match(/Main.*Round.*1/i)) {
+            parsedData['main-group-1'] = parseGroupFromHeader(doc, header, 'Main Round Group 1', 'main-group-1');
+        } else if (headerText.includes('Main Round Group 2') || headerText.includes('Main round group 2') || headerText.match(/Main.*Round.*2/i)) {
+            parsedData['main-group-2'] = parseGroupFromHeader(doc, header, 'Main Round Group 2', 'main-group-2');
+        } else if (headerText.includes('Final Ranking') || headerText.includes('Final ranking') || headerText.match(/Final.*Ranking/i)) {
+            parsedData['final-ranking'] = parseGroupFromHeader(doc, header, 'Final Ranking', 'final-ranking');
         }
     });
     
@@ -412,7 +422,7 @@ function getCurrentGroup() {
     if (groupSelect && groupSelect.value) {
         return groupSelect.value;
     }
-    return 'group-a'; // Default
+    return 'main-group-1'; // Default to main group 1
 }
 
 // Select group from column options
@@ -469,8 +479,8 @@ document.addEventListener('DOMContentLoaded', function() {
     displayData = JSON.parse(JSON.stringify(tournamentData));
     updateFlagPaths(displayData);
     
-    // Get saved group preference or default to group-a
-    const savedGroup = localStorage.getItem('selectedGroup') || 'group-a';
+    // Get saved group preference or default to main-group-1
+    const savedGroup = localStorage.getItem('selectedGroup') || 'main-group-1';
     
     // Set active state on column options
     selectGroup(savedGroup);
