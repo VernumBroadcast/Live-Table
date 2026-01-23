@@ -242,17 +242,38 @@ function parseTournamentData(doc) {
                         
                         // Check table rows for team codes that indicate which group (1A, 1C = Main Round Group 1; 2A, 2C = Main Round Group 2)
                         if (!groupKey && rows.length > 1) {
-                            const secondRow = rows[1];
-                            const teamCell = secondRow.querySelectorAll('td')[1];
-                            if (teamCell) {
-                                const teamText = teamCell.textContent.trim();
-                                if (teamText.match(/^1[ABCD]/)) {
-                                    groupName = 'Main Round Group 1';
-                                    groupKey = 'main-group-1';
-                                } else if (teamText.match(/^2[ABCD]/)) {
-                                    groupName = 'Main Round Group 2';
-                                    groupKey = 'main-group-2';
+                            // Check multiple rows to be sure
+                            let found1A = false;
+                            let found2A = false;
+                            
+                            for (let i = 1; i < Math.min(rows.length, 5); i++) {
+                                const row = rows[i];
+                                const cells = row.querySelectorAll('td');
+                                if (cells.length >= 2) {
+                                    const teamCell = cells[1];
+                                    const teamText = teamCell.textContent.trim();
+                                    console.log(`  Row ${i} team text: "${teamText}"`);
+                                    
+                                    // Check for team codes like 1A, 1B, 1C, 1D, 2A, 2B, 2C, 2D
+                                    if (teamText.match(/^1[ABCD]/i) || teamText.match(/^1\s*[ABCD]/i)) {
+                                        found1A = true;
+                                        console.log(`  Found Main Round Group 1 indicator: ${teamText}`);
+                                    }
+                                    if (teamText.match(/^2[ABCD]/i) || teamText.match(/^2\s*[ABCD]/i)) {
+                                        found2A = true;
+                                        console.log(`  Found Main Round Group 2 indicator: ${teamText}`);
+                                    }
                                 }
+                            }
+                            
+                            if (found1A && !parsedData['main-group-1']) {
+                                groupName = 'Main Round Group 1';
+                                groupKey = 'main-group-1';
+                                console.log(`  Identified as Main Round Group 1 based on team codes`);
+                            } else if (found2A && !parsedData['main-group-2']) {
+                                groupName = 'Main Round Group 2';
+                                groupKey = 'main-group-2';
+                                console.log(`  Identified as Main Round Group 2 based on team codes`);
                             }
                         }
                         
@@ -260,8 +281,16 @@ function parseTournamentData(doc) {
                             console.log(`Attempting to parse ${groupName} from table structure (table ${index})`);
                             const parsed = parseGroupFromTable(table, groupName, groupKey);
                             if (parsed && parsed.teams && parsed.teams.length > 0) {
-                                parsedData[groupKey] = parsed;
-                                console.log(`Successfully parsed ${groupName} with ${parsed.teams.length} teams`);
+                                // Check if we got actual data (not all zeros)
+                                const hasData = parsed.teams.some(team => team.pld > 0 || team.pts > 0);
+                                if (hasData || parsed.teams.length >= 2) {
+                                    parsedData[groupKey] = parsed;
+                                    console.log(`✓ Successfully parsed ${groupName} with ${parsed.teams.length} teams`);
+                                } else {
+                                    console.log(`⚠ Parsed ${groupName} but all values are zero, skipping`);
+                                }
+                            } else {
+                                console.log(`✗ Failed to parse ${groupName} from table ${index}`);
                             }
                         }
                     }
@@ -476,17 +505,33 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
 // Alternative parsing function that works directly with a table element
 function parseGroupFromTable(table, groupName, groupKey) {
     console.log(`Parsing ${groupName} directly from table`);
+    console.log(`Table has ${table.querySelectorAll('tr').length} rows`);
     
     const teams = [];
     const tbody = table.querySelector('tbody') || table;
     const rows = tbody.querySelectorAll('tr');
     
+    console.log(`Processing ${rows.length} rows...`);
+    
     rows.forEach((row, index) => {
         // Skip header row
-        if (row.querySelector('th')) return;
+        if (row.querySelector('th')) {
+            console.log(`  Row ${index}: Skipping header row`);
+            return;
+        }
         
         const cells = row.querySelectorAll('td');
-        if (cells.length < 2) return;
+        console.log(`  Row ${index}: Found ${cells.length} cells`);
+        
+        if (cells.length < 2) {
+            console.log(`  Row ${index}: Not enough cells, skipping`);
+            return;
+        }
+        
+        // Log cell contents for debugging
+        if (index <= 3) { // Log first few rows
+            console.log(`  Row ${index} cells:`, Array.from(cells).map((c, i) => `[${i}]: "${c.textContent.trim().substring(0, 20)}"`).join(', '));
+        }
         
         // Position (first cell)
         const posText = cells[0].textContent.trim();
@@ -503,20 +548,35 @@ function parseGroupFromTable(table, groupName, groupKey) {
         let teamName = teamCellClone.textContent.trim().replace(/\s+/g, ' ').split('\n')[0].trim();
         teamName = teamName.replace(/^\s+|\s+$/g, '').replace(/\s{2,}/g, ' ');
         
-        if (!teamName || teamName === '' || teamName.length < 1) return;
+        if (!teamName || teamName === '' || teamName.length < 1) {
+            console.log(`  Row ${index}: No team name found, skipping`);
+            return;
+        }
         
-        // Parse stats
+        // Parse stats - try different cell positions
         let pld = 0, w = 0, d = 0, l = 0, diff = 0, pts = 0;
         
+        // Try standard format first (Pos, Team, Pld, W, D, L, Diff, Pts)
         if (cells.length >= 8) {
-            pld = parseInt(cells[2]?.textContent.trim()) || 0;
-            w = parseInt(cells[3]?.textContent.trim()) || 0;
-            d = parseInt(cells[4]?.textContent.trim()) || 0;
-            l = parseInt(cells[5]?.textContent.trim()) || 0;
+            const pldText = cells[2]?.textContent.trim() || '0';
+            const wText = cells[3]?.textContent.trim() || '0';
+            const dText = cells[4]?.textContent.trim() || '0';
+            const lText = cells[5]?.textContent.trim() || '0';
             const diffText = cells[6]?.textContent.trim() || '0';
+            const ptsText = cells[7]?.textContent.trim() || '0';
+            
+            pld = parseInt(pldText) || 0;
+            w = parseInt(wText) || 0;
+            d = parseInt(dText) || 0;
+            l = parseInt(lText) || 0;
             diff = parseInt(diffText.replace(/[^\d-]/g, '')) || 0;
-            pts = parseInt(cells[7]?.textContent.trim()) || 0;
+            pts = parseInt(ptsText) || 0;
+            
+            if (index <= 2) {
+                console.log(`  Row ${index} stats: Pld=${pld}, W=${w}, D=${d}, L=${l}, Diff=${diff}, Pts=${pts}`);
+            }
         } else if (cells.length >= 7) {
+            // Alternative format
             pld = parseInt(cells[2]?.textContent.trim()) || 0;
             w = parseInt(cells[3]?.textContent.trim()) || 0;
             d = parseInt(cells[4]?.textContent.trim()) || 0;
@@ -538,11 +598,13 @@ function parseGroupFromTable(table, groupName, groupKey) {
         });
     });
     
+    console.log(`Parsed ${teams.length} teams from table`);
+    
     const defaultData = tournamentData[groupKey];
     const matches = defaultData?.matches || [];
     
     if (teams.length > 0) {
-        console.log(`Successfully parsed ${groupName} with ${teams.length} teams from table`);
+        console.log(`✓ Successfully parsed ${groupName} with ${teams.length} teams from table`);
         return {
             name: groupName,
             teams: teams,
@@ -550,6 +612,7 @@ function parseGroupFromTable(table, groupName, groupKey) {
         };
     }
     
+    console.log(`✗ No teams parsed, returning default data`);
     return defaultData ? { ...defaultData, name: groupName } : null;
 }
 
