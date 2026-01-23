@@ -176,6 +176,30 @@ function parseTournamentData(doc) {
         } else if (headerText.match(/Main\s+Round\s+Group\s*2/i) || headerText.match(/Main\s+Round.*2/i) || headerText.includes('Main Round Group 2') || headerText.includes('Main Round 2') || headerText.match(/^Main\s+Round\s+2$/i)) {
             console.log('Found Main Round Group 2 header:', headerText);
             parsedData['main-group-2'] = parseGroupFromHeader(doc, header, 'Main Round Group 2', 'main-group-2');
+        } else if (headerText.match(/^Group\s+1$/i) && !parsedData['main-group-1']) {
+            // Check if this is Main Round Group 1 (not preliminary) - look for teams like Kuwait, Japan, Korea, Iraq
+            console.log('Found "Group 1" header, checking if it\'s Main Round Group 1:', headerText);
+            const group1Data = parseGroupFromHeader(doc, header, 'Group 1', 'temp-group-1');
+            if (group1Data && group1Data.teams && group1Data.teams.length > 0) {
+                const teamNames = group1Data.teams.map(t => t.name.toLowerCase());
+                // Check if this looks like Main Round Group 1 (Kuwait, Japan, Korea, Iraq)
+                if (teamNames.some(name => name.includes('kuwait') || name.includes('japan') || (name.includes('korea') && !name.includes('republic')))) {
+                    console.log('Identified as Main Round Group 1 based on teams');
+                    parsedData['main-group-1'] = { ...group1Data, name: 'Main Round Group 1' };
+                }
+            }
+        } else if (headerText.match(/^Group\s+2$/i) && !parsedData['main-group-2']) {
+            // Check if this is Main Round Group 2 - look for teams like Bahrain, Qatar, Saudi Arabia, UAE
+            console.log('Found "Group 2" header, checking if it\'s Main Round Group 2:', headerText);
+            const group2Data = parseGroupFromHeader(doc, header, 'Group 2', 'temp-group-2');
+            if (group2Data && group2Data.teams && group2Data.teams.length > 0) {
+                const teamNames = group2Data.teams.map(t => t.name.toLowerCase());
+                // Check if this looks like Main Round Group 2 (Bahrain, Qatar, Saudi Arabia, UAE)
+                if (teamNames.some(name => name.includes('bahrain') || name.includes('qatar') || name.includes('saudi') || name.includes('uae') || name.includes('united arab'))) {
+                    console.log('Identified as Main Round Group 2 based on teams');
+                    parsedData['main-group-2'] = { ...group2Data, name: 'Main Round Group 2' };
+                }
+            }
         } else if (headerText.match(/Final\s+Ranking/i) || headerText.includes('Final Ranking')) {
             console.log('Found Final Ranking header:', headerText);
             parsedData['final-ranking'] = parseGroupFromHeader(doc, header, 'Final Ranking', 'final-ranking');
