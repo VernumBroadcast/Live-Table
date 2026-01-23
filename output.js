@@ -1,17 +1,31 @@
 // Output page - automatically fetches data from the Asian Handball website
 let displayData = {};
 
-// Fetch data from the website
+// Fetch data from Flashscore (better structured data)
 async function fetchTournamentData() {
-    const url = 'https://asianhandball.org/kuwait2026/s/';
-    
-    // Try multiple CORS proxy options
-    const proxyOptions = [
-        `https://corsproxy.io/?${encodeURIComponent(url)}`,
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-        `https://cors-anywhere.herokuapp.com/${url}`,
-        `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+    // Flashscore URLs for different groups/stages
+    // These appear to be for Main Round Group 1 and Group 2
+    const flashscoreUrls = [
+        'https://www.flashscore.info/handball/asia/asian-championship/standings/#/KYBijenD/standings/',
+        'https://www.flashscore.info/handball/asia/asian-championship/standings/#/W2tz5f16/standings/'
     ];
+    
+    // Try the original site first, then Flashscore as fallback
+    const originalUrl = 'https://asianhandball.org/kuwait2026/s/';
+    
+    // Try multiple CORS proxy options for original URL first
+    const proxyOptions = [
+        `https://corsproxy.io/?${encodeURIComponent(originalUrl)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(originalUrl)}`,
+        `https://cors-anywhere.herokuapp.com/${originalUrl}`,
+        `https://api.allorigins.win/get?url=${encodeURIComponent(originalUrl)}`
+    ];
+    
+    // Also try Flashscore URLs
+    flashscoreUrls.forEach(url => {
+        proxyOptions.push(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+        proxyOptions.push(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    });
     
     for (let i = 0; i < proxyOptions.length; i++) {
         try {
@@ -26,6 +40,7 @@ async function fetchTournamentData() {
             let htmlContent = '';
             
             // Handle different proxy response formats
+            let htmlContent = '';
             if (proxyOptions[i].includes('allorigins.win')) {
                 const data = await response.json();
                 htmlContent = data.contents;
@@ -37,8 +52,8 @@ async function fetchTournamentData() {
                 throw new Error('No valid content received');
             }
             
-            console.log(`Received HTML content length: ${htmlContent.length} characters`);
-            console.log(`HTML preview (first 500 chars):`, htmlContent.substring(0, 500));
+            const isFlashscore = proxyOptions[i].includes('flashscore.info');
+            console.log(`Received ${isFlashscore ? 'Flashscore' : 'original'} HTML content length: ${htmlContent.length} characters`);
             
             // Parse the HTML content
             const parser = new DOMParser();
@@ -54,8 +69,13 @@ async function fetchTournamentData() {
             const allTables = doc.querySelectorAll('table');
             console.log(`Found ${allTables.length} tables in the document`);
             
-            // Extract tournament data
-            const fetchedData = parseTournamentData(doc);
+            // Extract tournament data - use Flashscore parser if it's a Flashscore URL
+            let fetchedData;
+            if (isFlashscore) {
+                fetchedData = parseFlashscoreData(doc, proxyOptions[i]);
+            } else {
+                fetchedData = parseTournamentData(doc);
+            }
             
             // Only update if we got valid data
             if (fetchedData && Object.keys(fetchedData).length > 0) {
@@ -240,58 +260,80 @@ function parseTournamentData(doc) {
                             }
                         }
                         
-                        // Check table rows for team codes that indicate which group (1A, 1C = Main Round Group 1; 2A, 2C = Main Round Group 2)
+                        // Check table rows for team codes that indicate which group (1A, 1B, 1C, 1D = Main Round Group 1; 2A, 2B, 2C, 2D = Main Round Group 2)
                         if (!groupKey && rows.length > 1) {
                             // Check multiple rows to be sure
-                            let found1A = false;
-                            let found2A = false;
+                            let found1X = false;
+                            let found2X = false;
+                            let teamCodes = [];
                             
-                            for (let i = 1; i < Math.min(rows.length, 5); i++) {
+                            for (let i = 1; i < Math.min(rows.length, 6); i++) {
                                 const row = rows[i];
                                 const cells = row.querySelectorAll('td');
                                 if (cells.length >= 2) {
                                     const teamCell = cells[1];
-                                    const teamText = teamCell.textContent.trim();
-                                    console.log(`  Row ${i} team text: "${teamText}"`);
+                                    // Clone to remove images/flags
+                                    const teamCellClone = teamCell.cloneNode(true);
+                                    teamCellClone.querySelectorAll('img, svg').forEach(el => el.remove());
+                                    const teamText = teamCellClone.textContent.trim().replace(/\s+/g, '');
                                     
-                                    // Check for team codes like 1A, 1B, 1C, 1D, 2A, 2B, 2C, 2D
-                                    if (teamText.match(/^1[ABCD]/i) || teamText.match(/^1\s*[ABCD]/i)) {
-                                        found1A = true;
-                                        console.log(`  Found Main Round Group 1 indicator: ${teamText}`);
-                                    }
-                                    if (teamText.match(/^2[ABCD]/i) || teamText.match(/^2\s*[ABCD]/i)) {
-                                        found2A = true;
-                                        console.log(`  Found Main Round Group 2 indicator: ${teamText}`);
+                                    if (teamText) {
+                                        teamCodes.push(teamText);
+                                        console.log(`  Table ${index}, Row ${i} team text: "${teamText}"`);
+                                        
+                                        // Check for team codes like 1A, 1B, 1C, 1D (Main Round Group 1)
+                                        if (teamText.match(/^1[ABCD]/i) || teamText.match(/^1\s*[ABCD]/i)) {
+                                            found1X = true;
+                                            console.log(`  ✓ Found Main Round Group 1 indicator: ${teamText}`);
+                                        }
+                                        // Check for team codes like 2A, 2B, 2C, 2D (Main Round Group 2)
+                                        if (teamText.match(/^2[ABCD]/i) || teamText.match(/^2\s*[ABCD]/i)) {
+                                            found2X = true;
+                                            console.log(`  ✓ Found Main Round Group 2 indicator: ${teamText}`);
+                                        }
                                     }
                                 }
                             }
                             
-                            if (found1A && !parsedData['main-group-1']) {
+                            console.log(`  Table ${index} team codes found: ${teamCodes.join(', ')}`);
+                            
+                            // Prioritize groups that aren't already parsed
+                            if (found1X && !parsedData['main-group-1']) {
                                 groupName = 'Main Round Group 1';
                                 groupKey = 'main-group-1';
-                                console.log(`  Identified as Main Round Group 1 based on team codes`);
-                            } else if (found2A && !parsedData['main-group-2']) {
+                                console.log(`  ✓✓✓ Identified table ${index} as Main Round Group 1 based on team codes: ${teamCodes.join(', ')}`);
+                            } else if (found2X && !parsedData['main-group-2']) {
                                 groupName = 'Main Round Group 2';
                                 groupKey = 'main-group-2';
-                                console.log(`  Identified as Main Round Group 2 based on team codes`);
+                                console.log(`  ✓✓✓ Identified table ${index} as Main Round Group 2 based on team codes: ${teamCodes.join(', ')}`);
+                            } else if (found1X) {
+                                console.log(`  ⚠ Table ${index} has Group 1 codes but main-group-1 already parsed`);
+                            } else if (found2X) {
+                                console.log(`  ⚠ Table ${index} has Group 2 codes but main-group-2 already parsed`);
                             }
                         }
                         
                         if (groupKey && !parsedData[groupKey] && missingGroups.includes(groupKey)) {
-                            console.log(`Attempting to parse ${groupName} from table structure (table ${index})`);
+                            console.log(`\n=== ATTEMPTING TO PARSE ${groupName.toUpperCase()} FROM TABLE ${index} ===`);
                             const parsed = parseGroupFromTable(table, groupName, groupKey);
                             if (parsed && parsed.teams && parsed.teams.length > 0) {
                                 // Check if we got actual data (not all zeros)
                                 const hasData = parsed.teams.some(team => team.pld > 0 || team.pts > 0);
-                                if (hasData || parsed.teams.length >= 2) {
+                                const teamCount = parsed.teams.length;
+                                
+                                console.log(`Parsed result: ${teamCount} teams, hasData: ${hasData}`);
+                                
+                                if (hasData || teamCount >= 2) {
                                     parsedData[groupKey] = parsed;
-                                    console.log(`✓ Successfully parsed ${groupName} with ${parsed.teams.length} teams`);
+                                    console.log(`✓✓✓ SUCCESS! Parsed ${groupName} with ${teamCount} teams and stored in parsedData`);
+                                    console.log(`Teams:`, parsed.teams.map(t => `${t.name} (Pld:${t.pld}, Pts:${t.pts})`).join(', '));
                                 } else {
                                     console.log(`⚠ Parsed ${groupName} but all values are zero, skipping`);
                                 }
                             } else {
                                 console.log(`✗ Failed to parse ${groupName} from table ${index}`);
                             }
+                            console.log(`=== END PARSE ATTEMPT FOR ${groupName.toUpperCase()} ===\n`);
                         }
                     }
                 }
@@ -299,14 +341,29 @@ function parseTournamentData(doc) {
         });
     }
     
-    console.log('Parsed groups:', Object.keys(parsedData));
+    console.log('\n=== PARSING SUMMARY ===');
+    console.log('Groups successfully parsed from website:', Object.keys(parsedData).filter(key => {
+        const group = parsedData[key];
+        return group && group.teams && group.teams.length > 0 && 
+               group.teams.some(team => team.pld > 0 || team.pts > 0);
+    }));
+    console.log('All groups found:', Object.keys(parsedData));
+    console.log('========================\n');
     
     // Fill in missing groups with default data
     const defaultData = JSON.parse(JSON.stringify(tournamentData));
     Object.keys(defaultData).forEach(key => {
         if (!parsedData[key]) {
-            console.log(`Using default data for ${key}`);
+            console.log(`⚠ Using default data for ${key} (not found on website)`);
             parsedData[key] = defaultData[key];
+        } else {
+            // Check if parsed data has actual stats
+            const group = parsedData[key];
+            const hasRealData = group && group.teams && group.teams.length > 0 && 
+                               group.teams.some(team => team.pld > 0 || team.pts > 0);
+            if (!hasRealData) {
+                console.log(`⚠ Parsed ${key} but it has no game data, keeping parsed structure`);
+            }
         }
     });
     
@@ -500,6 +557,115 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
         console.warn(`No teams parsed for ${groupName}, using default data`);
         return defaultData ? { ...defaultData, name: groupName } : null;
     }
+}
+
+// Parse data from Flashscore (better structured)
+function parseFlashscoreData(doc, url) {
+    console.log('Parsing Flashscore data...');
+    const parsedData = {};
+    
+    // Flashscore typically uses specific class names for standings tables
+    // Look for tables with class names like 'table__standings', 'standings', etc.
+    const standingsTables = doc.querySelectorAll('table.standings, table.table__standings, .standings table, [class*="standings"] table, table');
+    
+    console.log(`Found ${standingsTables.length} Flashscore standings tables`);
+    
+    // Try to determine which group this is based on URL or content
+    let groupKey = null;
+    let groupName = null;
+    
+    if (url.includes('KYBijenD')) {
+        groupKey = 'main-group-1';
+        groupName = 'Main Round Group 1';
+    } else if (url.includes('W2tz5f16')) {
+        groupKey = 'main-group-2';
+        groupName = 'Main Round Group 2';
+    }
+    
+    standingsTables.forEach((table, index) => {
+        console.log(`Processing Flashscore table ${index}...`);
+        
+        const rows = table.querySelectorAll('tr');
+        if (rows.length < 2) return;
+        
+        const teams = [];
+        
+        rows.forEach((row, rowIndex) => {
+            // Skip header row
+            if (row.querySelector('th')) return;
+            
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 3) return;
+            
+            // Flashscore typically has: Position, Team, Played, Won, Drawn, Lost, Goals For, Goals Against, Goal Diff, Points
+            // But structure may vary, so we'll be flexible
+            
+            const posText = cells[0]?.textContent.trim() || '';
+            const pos = parseInt(posText) || (teams.length + 1);
+            
+            // Team name is usually in second cell
+            const teamCell = cells[1];
+            const teamCellClone = teamCell.cloneNode(true);
+            teamCellClone.querySelectorAll('img, svg, .flag').forEach(el => el.remove());
+            let teamName = teamCellClone.textContent.trim();
+            
+            if (!teamName || teamName.length < 1) return;
+            
+            // Parse stats - Flashscore usually has more columns
+            let pld = 0, w = 0, d = 0, l = 0, diff = 0, pts = 0;
+            
+            // Try to find stats columns (usually columns 2-8)
+            if (cells.length >= 8) {
+                pld = parseInt(cells[2]?.textContent.trim()) || 0;
+                w = parseInt(cells[3]?.textContent.trim()) || 0;
+                d = parseInt(cells[4]?.textContent.trim()) || 0;
+                l = parseInt(cells[5]?.textContent.trim()) || 0;
+                // Goal difference might be in different positions
+                const diffText = cells[6]?.textContent.trim() || cells[7]?.textContent.trim() || '0';
+                diff = parseInt(diffText.replace(/[^\d-]/g, '')) || 0;
+                pts = parseInt(cells[cells.length - 1]?.textContent.trim()) || 0;
+            } else if (cells.length >= 6) {
+                // Simpler format
+                pld = parseInt(cells[2]?.textContent.trim()) || 0;
+                w = parseInt(cells[3]?.textContent.trim()) || 0;
+                d = parseInt(cells[4]?.textContent.trim()) || 0;
+                l = parseInt(cells[5]?.textContent.trim()) || 0;
+                pts = parseInt(cells[cells.length - 1]?.textContent.trim()) || 0;
+            }
+            
+            teams.push({
+                pos: pos,
+                name: teamName,
+                flag: getFlagPath(teamName),
+                pld: pld,
+                w: w,
+                d: d,
+                l: l,
+                diff: diff,
+                pts: pts
+            });
+        });
+        
+        if (teams.length > 0 && groupKey) {
+            console.log(`✓ Parsed ${teams.length} teams for ${groupName} from Flashscore`);
+            parsedData[groupKey] = {
+                name: groupName,
+                teams: teams,
+                matches: tournamentData[groupKey]?.matches || []
+            };
+        }
+    });
+    
+    // Fill in other groups from default data
+    const defaultData = JSON.parse(JSON.stringify(tournamentData));
+    Object.keys(defaultData).forEach(key => {
+        if (!parsedData[key]) {
+            parsedData[key] = defaultData[key];
+        }
+    });
+    
+    updateFlagPaths(parsedData);
+    return parsedData;
 }
 
 // Alternative parsing function that works directly with a table element
