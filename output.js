@@ -84,38 +84,49 @@ async function fetchTournamentData() {
 function parseTournamentData(doc) {
     const parsedData = {};
     
-    // Find all group sections (they have h4 headers)
-    const allHeaders = Array.from(doc.querySelectorAll('h4'));
+    // Find all group sections - check h3, h4, and other headers
+    const allHeaders = Array.from(doc.querySelectorAll('h1, h2, h3, h4, h5'));
+    
+    console.log('Found headers:', allHeaders.map(h => h.textContent.trim()));
     
     allHeaders.forEach(header => {
         const headerText = header.textContent.trim();
         
         // Check if this is a group header - parse all groups including second stage
-        if (headerText.includes('Group A')) {
+        // Use more flexible matching for second stage groups
+        if (headerText.match(/^Group\s+A$/i) || headerText === 'Group A') {
             parsedData['group-a'] = parseGroupFromHeader(doc, header, 'Group A', 'group-a');
-        } else if (headerText.includes('Group B')) {
+        } else if (headerText.match(/^Group\s+B$/i) || headerText === 'Group B') {
             parsedData['group-b'] = parseGroupFromHeader(doc, header, 'Group B', 'group-b');
-        } else if (headerText.includes('Group C')) {
+        } else if (headerText.match(/^Group\s+C$/i) || headerText === 'Group C') {
             parsedData['group-c'] = parseGroupFromHeader(doc, header, 'Group C', 'group-c');
-        } else if (headerText.includes('Group D')) {
+        } else if (headerText.match(/^Group\s+D$/i) || headerText === 'Group D') {
             parsedData['group-d'] = parseGroupFromHeader(doc, header, 'Group D', 'group-d');
-        } else if (headerText.includes('Cup Group 3') || headerText.includes('Cup group 3') || headerText.match(/Cup.*3/i)) {
+        } else if (headerText.match(/Cup.*Group\s*3/i) || headerText.match(/^Cup\s+Group\s+3$/i)) {
+            console.log('Found Cup Group 3 header:', headerText);
             parsedData['cup-group-3'] = parseGroupFromHeader(doc, header, 'Cup Group 3', 'cup-group-3');
-        } else if (headerText.includes('Cup Group 4') || headerText.includes('Cup group 4') || headerText.match(/Cup.*4/i)) {
+        } else if (headerText.match(/Cup.*Group\s*4/i) || headerText.match(/^Cup\s+Group\s+4$/i)) {
+            console.log('Found Cup Group 4 header:', headerText);
             parsedData['cup-group-4'] = parseGroupFromHeader(doc, header, 'Cup Group 4', 'cup-group-4');
-        } else if (headerText.includes('Main Round Group 1') || headerText.includes('Main round group 1') || headerText.match(/Main.*Round.*1/i)) {
+        } else if (headerText.match(/Main\s+Round\s+Group\s*1/i) || headerText.match(/^Main\s+Round\s+Group\s+1$/i)) {
+            console.log('Found Main Round Group 1 header:', headerText);
             parsedData['main-group-1'] = parseGroupFromHeader(doc, header, 'Main Round Group 1', 'main-group-1');
-        } else if (headerText.includes('Main Round Group 2') || headerText.includes('Main round group 2') || headerText.match(/Main.*Round.*2/i)) {
+        } else if (headerText.match(/Main\s+Round\s+Group\s*2/i) || headerText.match(/^Main\s+Round\s+Group\s+2$/i)) {
+            console.log('Found Main Round Group 2 header:', headerText);
             parsedData['main-group-2'] = parseGroupFromHeader(doc, header, 'Main Round Group 2', 'main-group-2');
-        } else if (headerText.includes('Final Ranking') || headerText.includes('Final ranking') || headerText.match(/Final.*Ranking/i)) {
+        } else if (headerText.match(/Final\s+Ranking/i) || headerText.match(/^Final\s+Ranking$/i)) {
+            console.log('Found Final Ranking header:', headerText);
             parsedData['final-ranking'] = parseGroupFromHeader(doc, header, 'Final Ranking', 'final-ranking');
         }
     });
+    
+    console.log('Parsed groups:', Object.keys(parsedData));
     
     // Fill in missing groups with default data
     const defaultData = JSON.parse(JSON.stringify(tournamentData));
     Object.keys(defaultData).forEach(key => {
         if (!parsedData[key]) {
+            console.log(`Using default data for ${key}`);
             parsedData[key] = defaultData[key];
         }
     });
@@ -128,13 +139,15 @@ function parseTournamentData(doc) {
 
 // Parse a group from its header element
 function parseGroupFromHeader(doc, header, groupName, groupKey) {
-    // Find the next table after this header
+    console.log(`Parsing ${groupName} (${groupKey})`);
+    
+    // Find the next table after this header - search more thoroughly
     let currentElement = header.nextElementSibling;
     let table = null;
     
-    // Search for the table (might be in next few siblings)
+    // Search for the table (might be in next few siblings or parent containers)
     let attempts = 0;
-    while (currentElement && attempts < 10) {
+    while (currentElement && attempts < 20) {
         if (currentElement.tagName === 'TABLE') {
             table = currentElement;
             break;
@@ -145,11 +158,33 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
             table = childTable;
             break;
         }
+        // Also check if current element is a container that might have a table nearby
+        const nearbyTable = currentElement.querySelector('table');
+        if (nearbyTable) {
+            table = nearbyTable;
+            break;
+        }
         currentElement = currentElement.nextElementSibling;
         attempts++;
     }
     
+    // If still no table, try searching parent's siblings
+    if (!table && header.parentElement) {
+        let parentSibling = header.parentElement.nextElementSibling;
+        attempts = 0;
+        while (parentSibling && attempts < 10) {
+            const foundTable = parentSibling.querySelector('table');
+            if (foundTable) {
+                table = foundTable;
+                break;
+            }
+            parentSibling = parentSibling.nextElementSibling;
+            attempts++;
+        }
+    }
+    
     if (!table) {
+        console.warn(`No table found for ${groupName}, using default data`);
         // No table found, return default data for this group
         const defaultData = tournamentData[groupKey];
         if (defaultData) {
@@ -159,12 +194,17 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
         return null;
     }
     
+    console.log(`Found table for ${groupName} with ${table.querySelectorAll('tr').length} rows`);
+    
     // Parse teams from table rows
     const teams = [];
     const tbody = table.querySelector('tbody') || table;
     const rows = tbody.querySelectorAll('tr');
     
     rows.forEach((row, index) => {
+        // Skip header row
+        if (row.querySelector('th')) return;
+        
         const cells = row.querySelectorAll('td');
         if (cells.length < 2) return;
         
@@ -174,14 +214,20 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
         
         // Team name (second cell) - get text but remove flag images
         const teamCell = cells[1];
-        const teamName = teamCell.textContent.trim().replace(/\s+/g, ' ').split('\n')[0].trim();
+        // Clone to avoid modifying original
+        const teamCellClone = teamCell.cloneNode(true);
+        // Remove images from clone
+        teamCellClone.querySelectorAll('img').forEach(img => img.remove());
+        const teamName = teamCellClone.textContent.trim().replace(/\s+/g, ' ').split('\n')[0].trim();
         
-        if (!teamName || teamName === '' || teamName.length < 2) return;
+        if (!teamName || teamName === '' || teamName.length < 1) return;
         
-        // Parse stats if available
+        // Parse stats if available - check for different table structures
         let pld = 0, w = 0, d = 0, l = 0, diff = 0, pts = 0;
         
+        // Try different cell positions (some tables might have different structures)
         if (cells.length >= 8) {
+            // Standard format: Pos, Team, Pld, W, D, L, Diff, Pts
             pld = parseInt(cells[2]?.textContent.trim()) || 0;
             w = parseInt(cells[3]?.textContent.trim()) || 0;
             d = parseInt(cells[4]?.textContent.trim()) || 0;
@@ -189,6 +235,15 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
             const diffText = cells[6]?.textContent.trim() || '0';
             diff = parseInt(diffText.replace(/[^\d-]/g, '')) || 0;
             pts = parseInt(cells[7]?.textContent.trim()) || 0;
+        } else if (cells.length >= 7) {
+            // Alternative format
+            pld = parseInt(cells[2]?.textContent.trim()) || 0;
+            w = parseInt(cells[3]?.textContent.trim()) || 0;
+            d = parseInt(cells[4]?.textContent.trim()) || 0;
+            l = parseInt(cells[5]?.textContent.trim()) || 0;
+            const diffText = cells[6]?.textContent.trim() || '0';
+            diff = parseInt(diffText.replace(/[^\d-]/g, '')) || 0;
+            pts = 0; // Points might be calculated
         }
         
         teams.push({
@@ -204,15 +259,26 @@ function parseGroupFromHeader(doc, header, groupName, groupKey) {
         });
     });
     
+    console.log(`Parsed ${teams.length} teams for ${groupName}`);
+    
     // Get matches from default data (parsing matches from HTML is complex)
     const defaultData = tournamentData[groupKey];
     const matches = defaultData?.matches || [];
     
-    return {
+    const result = {
         name: groupName,
         teams: teams.length > 0 ? teams : (defaultData?.teams || []),
         matches: matches
     };
+    
+    // Only return parsed data if we got valid teams
+    if (teams.length > 0) {
+        console.log(`Successfully parsed ${groupName} with ${teams.length} teams`);
+        return result;
+    } else {
+        console.warn(`No teams parsed for ${groupName}, using default data`);
+        return defaultData ? { ...defaultData, name: groupName } : null;
+    }
 }
 
 // Update flag paths to use local flags for a single group
