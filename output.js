@@ -37,8 +37,6 @@ async function fetchTournamentData() {
                 }
             });
             
-            let htmlContent = '';
-            
             // Handle different proxy response formats
             let htmlContent = '';
             if (proxyOptions[i].includes('allorigins.win')) {
