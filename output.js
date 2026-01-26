@@ -294,7 +294,7 @@ function renderGroup(groupKey) {
     if (matchesContainer) matchesContainer.innerHTML = '';
 
     let tableHTML = `
-        <h2 class="group-headline">${(group.name || 'Championship').toUpperCase()}</h2>
+        <h2 class="group-headline">Championship Table</h2>
         <table>
             <thead>
                 <tr>
@@ -329,14 +329,24 @@ function renderGroup(groupKey) {
             );
         }
         
-        teamsToShow.forEach(team => {
+        teamsToShow.forEach((team, index) => {
             const disp = getTeamDisplay(team.name);
             const diffClass = team.diff > 0 ? 'positive' : team.diff < 0 ? 'negative' : '';
             const isNorwich = team.name.toLowerCase().includes('norwich');
-            const rowStyle = isNorwich ? 'color: yellow; font-weight: bold;' : '';
+            const isRelegationLine = team.pos === 22;
+            
+            // Norwich row: green background, yellow text, no hover
+            const rowClass = isNorwich ? 'norwich-row' : '';
+            const rowStyle = isNorwich ? 'background-color: #003e14; color: yellow;' : '';
+            
+            // Add red line above position 22 (relegation zone)
+            let relegationLine = '';
+            if (isRelegationLine) {
+                relegationLine = '<tr class="relegation-line"><td colspan="8" style="padding: 0; height: 4px; background-color: red; border: none;"></td></tr>';
+            }
 
-            tableHTML += `
-                <tr style="vertical-align: middle; ${rowStyle}">
+            tableHTML += relegationLine + `
+                <tr class="${rowClass}" style="vertical-align: middle; ${rowStyle}">
                     <td style="vertical-align: middle; text-align: center; ${rowStyle}">
                         ${team.pos}
                     </td>

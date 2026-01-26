@@ -5,6 +5,20 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: 'Adobe-Kis-Display-Italic';
+    src: url('Adobe-Kis-Display-Italic-iF6666c66b0db2e.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'NORWICHWEAVE-Single';
+    src: url('NORWICHWEAVE-SINGLE.OTF') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -12,7 +26,7 @@
 }
 
 body {
-    font-family: 'Cairo', Arial, Helvetica, sans-serif;
+    font-family: 'NORWICHWEAVE-Single', 'Adobe-Kis-Display-Italic', 'Cairo', Arial, Helvetica, sans-serif;
     background-image: url('BACKDROP.png');
     background-size: cover;
     background-position: center;
@@ -20,22 +34,9 @@ body {
     background-repeat: no-repeat;
     min-height: 100vh;
     padding: 0;
-    color: white;
+    color: #003e14;
     position: relative;
     overflow-x: hidden;
-}
-
-/* Dark overlay for better text readability */
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 0;
-    pointer-events: none;
 }
 
 .refresh-btn-top-left {
@@ -210,7 +211,7 @@ body::before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0 1.5%;
+    padding: 0 0.2%;
 }
 
 .table-container {
@@ -218,7 +219,7 @@ body::before {
     border-radius: 0;
     padding: 0;
     box-shadow: none;
-    margin-bottom: 50px;
+    margin-bottom: 0;
     margin-top: 0;
     overflow-x: auto;
     width: 100%;
@@ -226,21 +227,20 @@ body::before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 0;
-    padding-left: 1.5%;
-    padding-right: 1.5%;
+    padding-top: 40px;
+    padding-left: 0.2%;
+    padding-right: 0.2%;
 }
 
 .group-headline {
-    font-size: 5em;
+    font-size: 6em;
     font-weight: bold;
-    color: white;
+    color: #003e14;
     text-align: center;
-    margin-bottom: 35px;
+    margin-bottom: 30px;
     margin-top: 0;
     letter-spacing: 5px;
-    text-transform: uppercase;
-    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
+    font-family: 'Adobe-Kis-Display-Italic', Arial, Helvetica, sans-serif;
 }
 
 .table-container h2 {
@@ -251,48 +251,76 @@ table {
     width: 100%;
     max-width: 100%;
     border-collapse: collapse;
-    font-size: 2.5em;
+    font-size: 3em;
     margin: 0 auto;
     background: transparent;
-    table-layout: auto;
+    table-layout: fixed;
 }
 
 table thead {
     background: transparent;
-    color: white;
+    color: #003e14;
 }
 
 table th {
-    padding: 32px 20px;
+    padding: 55px 8px;
     text-align: center;
     font-weight: bold;
     text-transform: uppercase;
-    font-size: 1.6em;
+    font-size: 2em;
     letter-spacing: 2.5px;
-    color: rgba(255, 255, 255, 0.9);
-    border-bottom: 4px solid rgba(255, 255, 255, 0.3);
+    color: #003e14;
+    border-bottom: 4px solid rgba(0, 62, 20, 0.3);
 }
 
 table th:nth-child(2) {
     text-align: left;
-    padding-left: 20px;
+    padding-left: 15px;
+    padding-right: 25px;
 }
 
-/* Reduce padding for stats columns (PLD onwards) */
+/* Set column widths - team column gets more space, stats columns are narrow */
+table th:first-child,
+table td:first-child {
+    width: 5%;
+}
+
+table th:nth-child(2),
+table td:nth-child(2) {
+    width: 35%;
+}
+
 table th:nth-child(n+3),
 table td:nth-child(n+3) {
-    padding-left: 14px;
-    padding-right: 14px;
+    width: 8%;
+    padding-left: 2px;
+    padding-right: 2px;
+    min-width: auto;
 }
 
 table tbody tr {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-bottom: 1px solid rgba(0, 62, 20, 0.15);
     transition: all 0.2s ease;
     vertical-align: middle;
 }
 
 table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 62, 20, 0.05);
+}
+
+table tbody tr.norwich-row:hover {
+    background-color: #003e14;
+}
+
+.relegation-line {
+    border: none !important;
+}
+
+.relegation-line td {
+    padding: 0 !important;
+    height: 4px !important;
+    background-color: red !important;
+    border: none !important;
 }
 
 table tbody tr:last-child {
@@ -300,10 +328,10 @@ table tbody tr:last-child {
 }
 
 table td {
-    padding: 36px 20px;
+    padding: 60px 8px;
     text-align: center;
-    color: white;
-    font-size: 2.2em;
+    color: #003e14;
+    font-size: 2.8em;
     vertical-align: middle;
 }
 
@@ -313,15 +341,17 @@ table td:first-child {
     text-align: center;
     font-weight: bold;
     vertical-align: middle;
-    padding: 34px 15px;
+    padding: 60px 10px;
     display: table-cell;
 }
 
 table td:nth-child(2) {
     text-align: left;
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 15px;
+    padding-right: 25px;
     vertical-align: middle;
+    max-width: none;
+    min-width: 250px;
 }
 
 .team-name {
@@ -367,31 +397,31 @@ table td:nth-child(2) {
 }
 
 .position.pos-1 {
-    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-    box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
+    background: #003e14;
+    box-shadow: none;
 }
 
 .position.pos-2 {
-    background: linear-gradient(135deg, #C0C0C0 0%, #A0A0A0 100%);
-    box-shadow: 0 4px 8px rgba(192, 192, 192, 0.4);
+    background: #003e14;
+    box-shadow: none;
 }
 
 .position.pos-3 {
-    background: linear-gradient(135deg, #CD7F32 0%, #A0522D 100%);
-    box-shadow: 0 4px 8px rgba(205, 127, 50, 0.4);
+    background: #003e14;
+    box-shadow: none;
 }
 
 .stats {
     font-weight: bold;
-    color: white;
+    color: #003e14;
 }
 
 .stats.positive {
-    color: #4caf50;
+    color: #003e14;
 }
 
 .stats.negative {
-    color: #f44336;
+    color: #003e14;
 }
 
 .matches-container {
@@ -511,29 +541,45 @@ table td:nth-child(2) {
     
     .table-container {
         max-width: 100%;
+        padding-top: 40px;
         padding-left: 0.5%;
         padding-right: 0.5%;
     }
     
     .group-headline {
-        font-size: 4.2em;
-        margin-bottom: 30px;
+        font-size: 5.5em;
+        margin-bottom: 50px;
     }
     
     table {
-        font-size: 2em;
+        font-size: 2.8em;
         max-width: 100%;
     }
     
-    table th, table td {
-        padding: 28px 14px;
+    table th {
+        padding: 45px 8px;
     }
     
-    /* Reduce padding for stats columns on 4:3 but keep readable */
+    table td {
+        padding: 50px 8px;
+    }
+    
+    /* Column widths for 4:3 - team column gets more space, stats columns are narrow */
+    table th:first-child,
+    table td:first-child {
+        width: 5%;
+    }
+
+    table th:nth-child(2),
+    table td:nth-child(2) {
+        width: 35%;
+    }
+
     table th:nth-child(n+3),
     table td:nth-child(n+3) {
-        padding-left: 12px;
-        padding-right: 12px;
+        width: 8%;
+        padding-left: 2px;
+        padding-right: 2px;
     }
     
     table th {
